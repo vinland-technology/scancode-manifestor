@@ -213,48 +213,6 @@ def parse():
     return args
 
 
-def __match_generic(single_file, field_path, field, needle, only):
-    print("   * 0 -> match " + str(needle) + " " + str(field_path) + " " + str(field))
-    haystack = single_file
-    if field_path != None:
-        for f in field_path:
-            print("      * match \"" + str(f) + "\"  " + str(haystack), end="")
-            haystack = haystack[f]
-            print("  => " + str(haystack))
-            
-    print("   * 1 -> match    " + str(field))
-    print("   * 1 -> field    " + str(type(field)))
-    print("   * 1 -> haystack " + str(type(haystack)))
-    print("   * 1 -> haystack " + str(haystack))
-
-    if haystack == None or haystack == []:
-        print("NONONEONEOENEON  None or []")
-        found = None
-    else:
-        print("   * 2 -> match needle   " + str(needle))
-        print("   * 2 -> match haystack " + str(haystack))
-        if field == None:
-            print("field can't be None")
-            return None
-        else:
-            if isinstance(haystack, list):
-                all_match = True
-                one_match = False
-                for h in haystack:
-                    found = re.search(needle, h)
-                    all_match = all_match and found
-                    one_match = one_match or  found
-                if only:
-                    return all_match
-                else:
-                    return one_match
-            else:
-                haystack = haystack[field]
-                found = re.search(needle, haystack)
-                return found
-    print("   * matched:  " + str(found))
-    return found
-
 def _fetch_license(single_file):
     return single_file['license_expressions']
 
