@@ -192,8 +192,16 @@ def parse():
                         help="include files and dirs matching the supplied patterns",
                         default=[])
 
-    parser.add_argument('-c', '--curate',
-                        dest='curations',
+    parser.add_argument('-cf', '--curate-file',
+                        dest='file_curations',
+                        type=str,
+                        action='append',
+                        nargs="+",
+                        help="curations ....",
+                        default=[])
+
+    parser.add_argument('-cl', '--curate-license',
+                        dest='license_curations',
                         type=str,
                         action='append',
                         nargs="+",
@@ -355,21 +363,37 @@ def _curate_file_license(files, regexpr, lic):
         new_list.append(f)
     return new_list
 
+def _curate_license(files, regexpr, lic):
+    new_list = []
+    for f in files:
+        # Passing "[]" as regexp should be interpreted as
+        # matches license=[]
+        if regexpr == "[]":
+            if f['license'] == None or f['license'] == []:
+                verbose(f['name'] + " " + str(f['license']) + " => " + lic)
+                print(f['name'] + " " + str(f['license']) + " => " + lic)
+                f['license'] = lic
+        elif re.search(regexpr, f['license']):
+            verbose(f['name'] + " " + str(f['license']) + " => " + lic)
+            f['license'] = lic
+        new_list.append(f)
+    return new_list
+
 def _validate(files):
     errors = []
     warnings = []
-    ret['warnings'] = warnings
     for f in files:
         verbose("validating " + str(f['name']))
         if f['name'] == None or f['name'] == "":
             errors.append("File name can't be None or \"\"")
         if f['license'] == None or f['license'] == []:
-            errors.append("Error for " + f['name'] + ": license name can't be None or [].")
+            errors.append("Error for " + f['name'] + ": license can't be None or [].")
         if f['copyright'] == None or f['copyright'] == []:
-            warnings.append("Warning for " + f['name'] + ": copyright name None or [].")
+            warnings.append("Warning for " + f['name'] + ": copyright can't be None or [].")
 
     ret = {}
     ret['errors'] = errors
+    ret['warnings'] = warnings
     return ret
 
 def _output_files(files):
@@ -436,8 +460,8 @@ def main():
     # add curations
     #
     curated = transformed
-    verbose("curations: " + str(args.curations))
-    for curation in args.curations:
+    verbose("curations: " + str(args.file_curations))
+    for curation in args.file_curations:
         verbose("  * " + str(curation))
         length = len(curation)
         if length < 2:
@@ -450,12 +474,26 @@ def main():
                 verbose("      * " + curation[i] + ": " + lic)
                 curated = _curate_file_license(curated, curation[i], lic)
 
+    for curation in args.license_curations:
+        verbose("  * " + str(curation))
+        length = len(curation)
+        if length < 2:
+            error("      * uh oh")
+            exit(2)
+        else:
+            lic = curation[length-1]
+            # TODO: make sure lic is a valid license
+            for i in range(0,length-1):
+                verbose("      * " + curation[i] + ": " + lic)
+                curated = _curate_license(curated, curation[i], lic)
+
     #
     # validate
     #
     validation =_validate(curated)
     if validation['errors'] != []:
-        error("uh uhdkasdkahsd")
+        for err in validation['errors']:
+            error(err)
         exit(9)
     
     _output_files(curated)
