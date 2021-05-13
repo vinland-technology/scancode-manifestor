@@ -356,17 +356,22 @@ def _curate_file_license(files, regexpr, lic):
     return new_list
 
 def _validate(files):
+    errors = []
+    warnings = []
+    ret['warnings'] = warnings
     for f in files:
         verbose("validating " + str(f['name']))
         if f['name'] == None or f['name'] == "":
-            error("File name can't be None or \"\"")
-            exit(10)
+            errors.append("File name can't be None or \"\"")
         if f['license'] == None or f['license'] == []:
-            error("Error for " + f['name'] + ": license name can't be None or [].")
-            exit(10)
+            errors.append("Error for " + f['name'] + ": license name can't be None or [].")
         if f['copyright'] == None or f['copyright'] == []:
-            verbose("Warning for " + f['name'] + ": copyright name None or [].")
-            
+            warnings.append("Warning for " + f['name'] + ": copyright name None or [].")
+
+    ret = {}
+    ret['errors'] = errors
+    return ret
+
 def _output_files(files):
     copyrights = set()
     licenses = set()
@@ -419,14 +424,7 @@ def main():
         verbose("Exclude license: " + regexp)
         files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
 
-
-    
-    #    files = _filter_generic(files, Filters.PATH, "ondemand", False)
-    #    files = _filter_generic(files, Filters.PATH, "tests", False)
-    files = _filter_generic(files, FilterAttribute.LICENSE, "mit", FilterAction.INCLUDE, FilterModifier.ONLY)
-    #   files = _filter_generic(files, FilterAttribute.PATH, "extras", FilterAction.EXCLUDE)
     #_out(files, True, True)
-    #print("\n")
 
     #
     # transform to intermediate format
@@ -447,21 +445,18 @@ def main():
             exit(2)
         else:
             lic = curation[length-1]
+            # TODO: make sure lic is a valid license
             for i in range(0,length-1):
                 verbose("      * " + curation[i] + ": " + lic)
                 curated = _curate_file_license(curated, curation[i], lic)
-    #curated = _curate_file_license(transformed, "types.hpp", "bsd-3-clause")
-    #curated = _curate_file_license(curated, "rapidfuzz-cpp/rapidfuzz/details/SplittedSentenceView.hpp", "mit")
-    #curated = _curate_file_license(curated, "unicode.hpp", "mit")
-#print(json.dumps((transformed)))
-
-    _output_files(curated)
-    exit(0)
 
     #
     # validate
     #
-    _validate(curated)
+    validation =_validate(curated)
+    if validation['errors'] != []:
+        error("uh uhdkasdkahsd")
+        exit(9)
     
     _output_files(curated)
     
@@ -469,39 +464,6 @@ def main():
     exit(0)
 
         
-    if args.dir:
-        files_info = {}
-        dirs_info = {}
-        result = collect_license_dir(report, args.dir, args, dirs_info, files_info)
-    else:
-        result = output_license_per_dir(report, args)
-
-    if result != None:
-        if args.json_format:
-            print(json.dumps(result))
-        else:
-            for k,v in result.items():
-
-                # If dir and top-level
-                if not args.files and args.top_level:
-                    if "/" in k:
-                        continue
-                    
-                l_fmt = "%-40s: %s %s"
-                lic = list(v['licenses'])
-                if lic == [] and args.files:
-                    continue
-                if args.include_copyrights:
-                    cop = v['copyrights']
-                else:
-                    cop=""
-                res_str = str(l_fmt) % ( k, lic, cop)
-                print(res_str)
-    else:
-        print("")
-        
-#                l_fmt = "%-40s: %s %s"
-#                lic_c_str = str(l_fmt) % ( dir, set_str, c_set_str)
 
     
 if __name__ == '__main__':
