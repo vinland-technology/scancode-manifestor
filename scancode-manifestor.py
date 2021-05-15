@@ -321,8 +321,8 @@ def _match_generic(single_file, filter, regexpr, only):
         #   and items (the files's selected attributes) are not empty => False
         # Typically this occurs when matching empty license (i.e. []) with "[]"
         #print("ITEMS " + str(items) + " ==>" + str(items == set()))
-        if items == set():
-            print("ITEMS " + str(single_file['path']) + " " + str(single_file['license_expressions']))
+        #if items == set():
+        #    print("ITEMS " + str(single_file['path']) + " " + str(single_file['license_expressions']))
             
         return items == set()
     
@@ -346,10 +346,10 @@ def _match_generic(single_file, filter, regexpr, only):
     if all_match == None:
         all_match = False
         
-    if FilterModifier.ONLY:
+    if only == FilterModifier.ONLY:
         #print("return ONLY " + str(all_match))
         return all_match
-    else:
+    elif only == FilterModifier.ANY:
         #print("return ONE")
         return one_match
 
@@ -369,7 +369,16 @@ def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=F
         #_match_generic(f, None,           'path', regexpr, only)
         #_match_generic(f, ["license_expressions"], '', regexpr, only)
         #_match_generic(f, ["copyrights"], ['key'],     regexpr, only)
-        match = _match_generic(f, filter, regexpr, only)
+        if isinstance(regexpr, list):
+            verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
+            match = True
+            for re in regexpr:
+                match = match and _match_generic(f, filter, re, only)
+                verbose("   re:" + str(re) + "  ==> " + str(match))
+            verbose("   ===================> " + str(match))
+        else:
+            match = _match_generic(f, filter, regexpr, only)
+            
         #print("match " + str(f['path'] + " " + str(f['license_expressions']) + " " + str(regexpr) + ": " + str(match)))
         # store in list if either:
         #   match and include 
@@ -491,11 +500,9 @@ def _filter(files, included_regexps, excluded_regexps, show_licenses, hide_licen
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
 
     for regexp_list in hide_only_licenses:
-        verbose("Exclude only file: " + str(regexp_list))
-        for regexp in regexp_list:
-            verbose(" * exclude license: " + regexp)
-            files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE, FilterModifier.ONLY)
-    
+        verbose("Exclude only license: " + str(regexp_list))
+        files = _filter_generic(files, FilterAttribute.LICENSE, regexp_list, FilterAction.EXCLUDE, FilterModifier.ANY)
+
     return files
 
 def _transform_files_helper(files):
