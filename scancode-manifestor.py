@@ -189,8 +189,8 @@ def parse():
                         help='output copyright information',
                         default=False)
 
-    parser.add_argument('-el', '--exclude-licenses',
-                        dest='excluded_licenses',
+    parser.add_argument('-hl', '--hide-licenses',
+                        dest='hide_licenses',
                         type=str,
                         nargs="+",
                         help="excluded licenses (if set, remove file/dir from printout)",
@@ -445,7 +445,7 @@ def _obsoleted_summarize(_files):
     summary['copyright'] = copyrights_list
     return summary
 
-def _filter(files, included_regexps, excluded_regexps, included_licenses, excluded_licenses, hide_only_licenses):
+def _filter(files, included_regexps, excluded_regexps, included_licenses, hide_licenses, hide_only_licenses):
     for regexp_list in included_regexps:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -463,7 +463,7 @@ def _filter(files, included_regexps, excluded_regexps, included_licenses, exclud
         for regexp in regexp_list:
             verbose(" * include license: " + regexp)
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE)
-    for regexp_list in excluded_licenses:
+    for regexp_list in hide_licenses:
         verbose("Exclude file:    " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * exclude license: " + regexp)
@@ -819,7 +819,7 @@ def main():
     #
     # filter files
     #
-    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'], args['hide_only_licenses'])
+    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['hide_licenses'], args['hide_only_licenses'])
 
     #
     # if filter mode - this is the final step in the pipe
