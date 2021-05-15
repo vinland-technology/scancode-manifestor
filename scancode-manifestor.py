@@ -203,13 +203,12 @@ def parse():
                         help="included licenses (if set, remove file/dir from printout)",
                         default=[])
 
-    # ?
-    parser.add_argument('-eol', '--exclude-only-licenses',
-                        dest='exclude_only_licenses',
+    parser.add_argument('-hol', '--hide-only-licenses',
+                        dest='hide_only_licenses',
                         type=str,
                         action='append',
                         nargs="+",
-                        help="excluded licenses (if they appear as only license)",
+                        help="hide licenses (if they appear as only license) in filter mode",
                         default=[])
 
     # ?
@@ -297,9 +296,19 @@ def _match_generic(single_file, filter, regexpr, only):
         return False
 
     #print(single_file['path'] + "  items: " + str(items))
-    if items == []:
-        return False
+    if regexpr == "[]":
+        #print("REGEXPR []")
+        # If regexpr is []
+        #   and items (the files's selected attributes) are empty => True
+        #   and items (the files's selected attributes) are not empty => False
+        # Typically this occurs when matching empty license (i.e. []) with "[]"
+        #print("ITEMS " + str(items) + " ==>" + str(items == set()))
+        if items == set():
+            print("ITEMS " + str(single_file['path']) + " " + str(single_file['license_expressions']))
+            
+        return items == set()
     
+
     # for each item, search for regexpr
     all_match = None
     one_match = False
@@ -316,8 +325,11 @@ def _match_generic(single_file, filter, regexpr, only):
             all_match = all_match and (found!=None)
         one_match = one_match or  (found!=None)
 
+    if all_match == None:
+        all_match = False
+        
     if FilterModifier.ONLY:
-        #print("return ONLY")
+        #print("return ONLY " + str(all_match))
         return all_match
     else:
         #print("return ONE")
@@ -433,7 +445,7 @@ def _obsoleted_summarize(_files):
     summary['copyright'] = copyrights_list
     return summary
 
-def _filter(files, included_regexps, excluded_regexps, included_licenses, excluded_licenses, exclude_only_licenses):
+def _filter(files, included_regexps, excluded_regexps, included_licenses, excluded_licenses, hide_only_licenses):
     for regexp_list in included_regexps:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -457,7 +469,7 @@ def _filter(files, included_regexps, excluded_regexps, included_licenses, exclud
             verbose(" * exclude license: " + regexp)
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
 
-    for regexp_list in exclude_only_licenses:
+    for regexp_list in hide_only_licenses:
         verbose("Exclude only file: " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * exclude license: " + regexp)
@@ -571,6 +583,13 @@ def _curate(files, file_curations, license_curations, missing_license_curation):
         curated = _curate_license(curated, "[]", missing_license_curation)
 
     return curated
+
+def _count_files(files):
+    cnt = 0 
+    for f in files:
+        if f['type'] == "file":
+            cnt += 1
+    return cnt
 
 def _validate(files, report):
     errors = []
@@ -692,11 +711,13 @@ def _output_filtered_helper(files, show_files=True, show_dirs=False, file_key='i
 
 
 def _output_filtered(files, stream=sys.stdout):
-    print("Excluded " + str(len(files['excluded'])))
+    print("Excluded  " + str(_count_files(files['excluded'])))
     _output_filtered_helper(files, True, False, 'excluded', stream)
-    print("Included " + str(len(files['included'])))
+
+    print("Included  " + str(_count_files(files['included'])))
     _output_filtered_helper(files, True, False, 'included', stream)
 
+    
 def _get_config_file_name(args):
     if args['output'] != None:
         return args['output']
@@ -798,7 +819,7 @@ def main():
     #
     # filter files
     #
-    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'], args['exclude_only_licenses'])
+    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'], args['hide_only_licenses'])
 
     #
     # if filter mode - this is the final step in the pipe
