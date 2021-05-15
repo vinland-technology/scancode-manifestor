@@ -531,7 +531,9 @@ def _transform_files_helper(files):
             else:
                 spdx_expr += " and "
             spdx_expr += lic
-            
+
+
+        #print("lic: " + str(lic_expr))
         file_map['license_key'] = lic_expr
         file_map['license_spdx'] = spdx_expr
 
@@ -694,7 +696,7 @@ def _report(args, scancode_report, _files):
     #print("\nlicenses: " + str(lic_expr))
     licensing = Licensing()
     parsed = licensing._parse_and_simplify(lic_expr)
-    json_compat_lic = str(parsed).replace("AND", "and")
+    json_compat_lic = str(parsed).replace("AND", " & ")
     #print("\nlicenses: " + str(parsed))
     #exit(0)
     
