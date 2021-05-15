@@ -130,6 +130,26 @@ def parse():
                         help='output verbose information to stderr',
                         default=False)
     
+    parser.add_argument('-f', '--force',
+                        action='store_true',
+                        dest='forced_mode',
+                        help='used forced mode',
+                        default=False)
+    
+    parser.add_argument('-o', '--output',
+                        help='output to file',
+                        default=None)
+    
+    parser.add_argument('-c', '--config',
+                        help='read config file',
+                        default=None)
+    
+    parser.add_argument('-gon', '--generate-output-name',
+                        action='store_true',
+                        dest='generate_output_name',
+                        help='generate output file name from project',
+                        default=None)
+    
     parser.add_argument('-sd', '--show-directories',
                         action='store_true',
                         dest='show_directories',
@@ -143,9 +163,24 @@ def parse():
                         default=False)
     
     parser.add_argument('-i', '--input-file',
-                        dest='file',
+                        dest='input_file',
                         help='read input from file',
-                        default=False)
+                        default=None)
+
+    parser.add_argument('-pn', '--project-name',
+                        dest='project_name',
+                        help='specify name of project',
+                        default=None)
+
+    parser.add_argument('-pv', '--project-version',
+                        dest='project_version',
+                        help='specify version of project',
+                        default=None)
+
+    parser.add_argument('-pu', '--project-url',
+                        dest='project_url',
+                        help='specify url to the project',
+                        default=None)
 
     # ?
     parser.add_argument('-tl', '--top-level',
@@ -155,11 +190,11 @@ def parse():
                         default=False)
 
     # ?
-    parser.add_argument('-f', '--files',
-                        dest='files',
-                        action='store_true',
-                        help='output license information per file instead of per dir',
-                        default=False)
+    #parser.add_argument('-f', '--files',
+    #                    dest='files',
+    #                    action='store_true',
+    #                    help='output license information per file instead of per dir',
+    #                    default=False)
 
     # ?
     parser.add_argument('-ic', '--include-copyrights',
@@ -600,15 +635,17 @@ def _report(args, scancode_report, _files):
     report['files']['included'] = _files['included']
     report['files']['excluded'] = _files['excluded']
     report['conclusion'] = {}
-    report['conclusion']['license'] = lic_expr
+    report['conclusion']['project_name'] = args['project_name']
+    report['conclusion']['project_version'] = args['project_version']
+    report['conclusion']['project_url'] = args['project_url']
     report['conclusion']['copyright'] = c_list
     report['conclusion']['included_files_count'] = len(_files['included'])
     report['conclusion']['excluded_files_count'] = len(_files['excluded'])
     report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
     report['meta']={}
-    report['meta']['arguments'] = args.__dict__
+    report['meta']['arguments'] = args #.__dict__
     report['meta']['report_date'] = str(datetime.datetime.now())
-    report['meta']['scancode_report'] = args.file
+    report['meta']['scancode_report'] = args['input_file']
 
     return report
 
@@ -644,23 +681,99 @@ def _output_filtered(files, stream=sys.stdout):
     _output_filtered_helper(files, True, False, 'excluded', stream)
     print("Included " + str(len(files['included'])))
     _output_filtered_helper(files, True, False, 'included', stream)
+
+def _get_config_file_name(args):
+    if args['output'] != None:
+        return args['output']
+    if args['generate_output_name'] != None:
+        if args['project_name'] != None and args['project_version'] != None:
+            return args['project_name'] + "-" + args['project_version'] + "-conclusion.json"
+        else:
+            warn("Missing project information. Can't generate output file name")
+            # TODO: throw exception instead of exit
+            exit (2)
     
-            
+    
+    
+def output_args_to_file(args):
+    verbose("Storing config..")
+    out_file = _get_config_file_name(args)
+    verbose("Storing config to: \"" + str(out_file) + "\"")
+    if out_file != None:
+        if os.path.isfile(out_file):
+            if not args['forced_mode']:
+                warn("File '" + out_file + "' already exists. Remove it, use another name or use forced mode (-f))")
+                exit(1)
+        sys.stdout = open(out_file, 'w')
+        
+    print(json.dumps(args))  
+
+    
 def _setup_files(files):
     return _files_map(files, [])
-            
-def main():
-    args = parse()
 
-    # dumps args (to save cli, later on)
-    # print(json.dumps(args.__dict__))
+def _read_merge_args(args):
+    new_args = {}
+    verbose("read config: " + str(args['config']))
+    with open(args['config']) as fp:
+        config_args = json.load(fp)
+    verbose("read config: " + str(json.dumps(config_args)))
+    verbose("")
+    verbose("args       : " + str(json.dumps(args)))
+    verbose("")
+    for k,v in config_args.items():
+        verbose(" * " + str(k))
+        verbose("   * " + str(v))
+        verbose("   * " + str(args[k]))
+        v_type = type(config_args[k])
+        verbose("    * " + str(v_type))
+        new_args[k] = config_args[k]
+        if args[k] == None or args[k] == [] :
+            pass
+        else:
+            if isinstance(config_args[k],list):
+                verbose("       merge ")
+                new_args[k] = config_args[k] + args[k] 
+            else:
+                new_args[k] = args[k] 
+                verbose("       replace")
+    
+    verbose(" -- merged arguments ---")
+    new_args['mode'] = args['mode']
+    for k,v in new_args.items():
+        verbose(" * " + str(k) + ": " + str(new_args[k]))
+    return new_args
+    
+def main():
+    parsed_args = parse()
+
+    args = parsed_args.__dict__
+    
+    #print("command line: " + str(sys.argv))
+    #print("command line: " + str(parsed_args.mode))
+    
+    #
+    # if config file supplied - read up args and merge with those
+    # supplied on command line
+    #
+    if args['config'] != None:
+        args = _read_merge_args(args)
+
+    
+    #
+    # if config mode - dump args and leave
+    #
+    if args['mode'] == MODE_CONFIG:
+        output_args_to_file(args)
+        exit(0)
+
 
     #
     # SETUP 
     #
     
     # Open scancode report
-    with open(args.file) as fp:
+    with open(args['input_file']) as fp:
         scancode_report = json.load(fp)
 
     # Setup files map
@@ -669,12 +782,12 @@ def main():
     #
     # filter files
     #
-    filtered =_filter(files, args.included_regexps, args.excluded_regexps, args.included_licenses, args.excluded_licenses)
+    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'])
 
     #
     # if filter mode - this is the final step in the pipe
     #
-    if args.mode == MODE_FILTER:
+    if args['mode'] == MODE_FILTER:
         _output_filtered(filtered, sys.stdout)
         exit(0)
 
@@ -682,7 +795,7 @@ def main():
     #
     # Continue with pipe, but first verbose files
     #
-    if args.verbose:
+    if args['verbose']:
         verbose("---- filtered files -----")
         _output_filtered(filtered, sys.stderr)
 
@@ -690,7 +803,7 @@ def main():
     # transform to intermediate format
     #
     transformed = _transform_files(filtered)
-    if args.verbose:
+    if args['verbose']:
         verbose("---- transformed files -----")
         _output_filtered(transformed, sys.stderr)
     #print(json.dumps((transformed)))
@@ -698,7 +811,7 @@ def main():
     #
     # add curations
     #
-    curated = _curate(transformed, args.file_curations, args.license_curations, args.missing_license_curation)
+    curated = _curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
     
     #
     # validate
@@ -712,7 +825,7 @@ def main():
     #
     # if validate mode - this is the final step in the pipe
     #
-    if args.mode == MODE_VALIDATE:
+    if args['mode'] == MODE_VALIDATE:
         print("Curated and validated files:")
         _output_files(curated)
         print("License and copyright:")
