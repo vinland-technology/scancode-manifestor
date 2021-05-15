@@ -183,31 +183,10 @@ def parse():
                         default=None)
 
     # ?
-    parser.add_argument('-tl', '--top-level',
-                        dest='top_level',
-                        action='store_true',
-                        help='print only top level directory(ies) in text format',
-                        default=False)
-
-    # ?
-    #parser.add_argument('-f', '--files',
-    #                    dest='files',
-    #                    action='store_true',
-    #                    help='output license information per file instead of per dir',
-    #                    default=False)
-
-    # ?
     parser.add_argument('-ic', '--include-copyrights',
                         dest='include_copyrights',
                         action='store_true',
                         help='output copyright information',
-                        default=False)
-
-    # ?
-    parser.add_argument('-j', '--json',
-                        dest='json_format',
-                        action='store_true',
-                        help='output in JSON',
                         default=False)
 
     parser.add_argument('-el', '--exclude-licenses',
@@ -225,12 +204,13 @@ def parse():
                         default=[])
 
     # ?
-    parser.add_argument('-exl', '--exact-exclude-licenses',
-                        dest='exact_excluded_licenses',
+    parser.add_argument('-eol', '--exclude-only-licenses',
+                        dest='exclude_only_licenses',
                         type=str,
+                        action='append',
                         nargs="+",
-                        help="excluded licenses (if they appear as only license) (if set, remove file/dir from printout)",
-                        default=None)
+                        help="excluded licenses (if they appear as only license)",
+                        default=[])
 
     # ?
     parser.add_argument('-exu', '--exact-exclude-unknown',
@@ -314,14 +294,14 @@ def _match_generic(single_file, filter, regexpr, only):
     elif filter == FilterAttribute.LICENSE:
         items = _fetch_license(single_file)
     else:
-        return None
-        
+        return False
+
     #print(single_file['path'] + "  items: " + str(items))
     if items == []:
         return False
     
     # for each item, search for regexpr
-    all_match = True
+    all_match = None
     one_match = False
     for i in items:
         found = re.search(regexpr, i)
@@ -330,10 +310,12 @@ def _match_generic(single_file, filter, regexpr, only):
         #print(" found   " + str(type(found)))
         #print(" found   " + str(found))
         #print(" found   " + str(found==True))
-        all_match = all_match and (found!=None)
+        if all_match == None:
+            all_match = (found!=None)
+        else:
+            all_match = all_match and (found!=None)
         one_match = one_match or  (found!=None)
 
-    #print(" " + str(all_match) + " " + str(one_match))
     if FilterModifier.ONLY:
         #print("return ONLY")
         return all_match
@@ -358,7 +340,7 @@ def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=F
         #_match_generic(f, ["license_expressions"], '', regexpr, only)
         #_match_generic(f, ["copyrights"], ['key'],     regexpr, only)
         match = _match_generic(f, filter, regexpr, only)
-
+        #print("match " + str(f['path'] + " " + str(f['license_expressions']) + " " + str(regexpr) + ": " + str(match)))
         # store in list if either:
         #   match and include 
         # or 
@@ -393,6 +375,12 @@ def _extract_license(f):
     licenses = set()
     for lic in f['licenses']:
         licenses.add(lic['key'])
+    return licenses
+
+def _extract_license_spdx(f):
+    licenses = set()
+    for lic in f['licenses']:
+        licenses.add(lic['spdx_license_key'])
     return licenses
 
 def _obsolete_extract_license(f):
@@ -441,11 +429,11 @@ def _obsoleted_summarize(_files):
     copyrights_list = list(copyrights)
     copyrights_list.sort()
     
-    summary['license'] = license_list
+    summary['license_key'] = license_list
     summary['copyright'] = copyrights_list
     return summary
 
-def _filter(files, included_regexps, excluded_regexps, included_licenses, excluded_licenses):
+def _filter(files, included_regexps, excluded_regexps, included_licenses, excluded_licenses, exclude_only_licenses):
     for regexp_list in included_regexps:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -463,13 +451,18 @@ def _filter(files, included_regexps, excluded_regexps, included_licenses, exclud
         for regexp in regexp_list:
             verbose(" * include license: " + regexp)
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE)
-
     for regexp_list in excluded_licenses:
         verbose("Exclude file:    " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * exclude license: " + regexp)
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
 
+    for regexp_list in exclude_only_licenses:
+        verbose("Exclude only file: " + str(regexp_list))
+        for regexp in regexp_list:
+            verbose(" * exclude license: " + regexp)
+            files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE, FilterModifier.ONLY)
+    
     return files
 
 def _transform_files_helper(files):
@@ -490,8 +483,17 @@ def _transform_files_helper(files):
             else:
                 lic_expr += " and "
             lic_expr += lic
+
+        spdx_expr = None
+        for lic in list(_extract_license_spdx(f)):
+            if spdx_expr == None:
+                spdx_expr = ""
+            else:
+                spdx_expr += " and "
+            spdx_expr += lic
             
-        file_map['license'] = lic_expr
+        file_map['license_key'] = lic_expr
+        file_map['license_spdx'] = spdx_expr
 
         copyrights = set()
         for c in f['copyrights']:
@@ -510,8 +512,8 @@ def _curate_file_license(files, regexpr, lic):
         #print("\nf: " + str(f))
         if re.search(regexpr, f['name']):
             #verbose(f['name'] + " " + str(f['license']) + " => " + lic)
-            verbose(f['name'] + " " + str(f['license']) + " => " + lic)
-            f['license'] = lic
+            verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
+            f['license_key'] = lic
         new_list.append(f)
     return _files_map(new_list, files['excluded'])
 
@@ -523,14 +525,14 @@ def _curate_license(files, regexpr, lic):
         # Passing "[]" as regexp should be interpreted as
         # matches license=[]
         if regexpr == "[]":
-            if f['license'] == None or f['license'] == []:
-                verbose(f['name'] + " " + str(f['license']) + " => " + lic)
-                f['license'] = lic
-        elif f['license'] == None:
+            if f['license_key'] == None or f['license_key'] == []:
+                verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
+                f['license_key'] = lic
+        elif f['license_key'] == None:
             pass
-        elif re.search(regexpr, f['license']):
-            verbose(f['name'] + " " + str(f['license']) + " => " + lic)
-            f['license'] = lic
+        elif re.search(regexpr, f['license_key']):
+            verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
+            f['license_key'] = lic
         new_list.append(f)
     return _files_map(new_list, files['excluded'])
 
@@ -586,7 +588,7 @@ def _validate(files, report):
         verbose("validating " + str(f['name']))
         if f['name'] == None or f['name'] == "":
             errors.append("File name can't be None or \"\"")
-        if f['license'] == None or f['license'] == []:
+        if f['license_key'] == None or f['license_key'] == []:
             errors.append("Error for " + f['name'] + ": license can't be None or [].")
         if f['copyright'] == None or f['copyright'] == []:
             warnings.append("Warning for " + f['name'] + ": copyright can't be None or [].")
@@ -613,11 +615,13 @@ def _report(args, scancode_report, _files):
     files = _files['included']
     
     for f in files:
-        verbose("collecting info " + str(f['name']) + " " + f['license'])
+        verbose("collecting info " + str(f['name']) + " " + f['license_key'])
         for c in f['copyright']:
             copyrights.add(c)
-        licenses.add(f['license'])
-
+        print("adding key... " + str(f['license_key']))
+        licenses.add(f['license_key'])
+        exit(0)
+        
     lic_expr = None
     for lic in licenses:
         if lic_expr == None:
@@ -626,6 +630,15 @@ def _report(args, scancode_report, _files):
             lic_expr += " and "
         
         lic_expr += lic
+
+    spdx_expr = None
+    for lic in licenses:
+        if spdx_expr == None:
+            spdx_expr = ""
+        else:
+            spdx_expr += " and "
+        
+        spdx_expr += lic
 
     c_list = list(copyrights)
     c_list.sort()
@@ -639,6 +652,8 @@ def _report(args, scancode_report, _files):
     report['conclusion']['project_version'] = args['project_version']
     report['conclusion']['project_url'] = args['project_url']
     report['conclusion']['copyright'] = c_list
+    report['conclusion']['license_expression'] = lic_expr
+    report['conclusion']['license_expression_spdx'] = spdx_expr
     report['conclusion']['included_files_count'] = len(_files['included'])
     report['conclusion']['excluded_files_count'] = len(_files['excluded'])
     report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
@@ -751,6 +766,7 @@ def main():
     
     #print("command line: " + str(sys.argv))
     #print("command line: " + str(parsed_args.mode))
+    #exit(0)
     
     #
     # if config file supplied - read up args and merge with those
@@ -782,7 +798,7 @@ def main():
     #
     # filter files
     #
-    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'])
+    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['excluded_licenses'], args['exclude_only_licenses'])
 
     #
     # if filter mode - this is the final step in the pipe
@@ -829,7 +845,7 @@ def main():
         print("Curated and validated files:")
         _output_files(curated)
         print("License and copyright:")
-        print("license:   " + str(report['conclusion']['license']))
+        print("license:   " + str(report['conclusion']['license_key']))
         print("copyright: " + str(report['conclusion']['copyright']))
         exit(0)
 
