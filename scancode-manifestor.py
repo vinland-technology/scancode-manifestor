@@ -691,6 +691,15 @@ def _report(args, scancode_report, _files):
     c_list = list(copyrights)
     c_list.sort()
 
+    #print("\nlicenses: " + str(lic_expr))
+    licensing = Licensing()
+    parsed = licensing._parse_and_simplify(lic_expr)
+    json_compat_lic = str(parsed).replace("AND", "and")
+    #print("\nlicenses: " + str(parsed))
+    #exit(0)
+    
+          
+    
     report = {}
     report['files'] = {}
     report['files']['included'] = _files['included']
@@ -700,7 +709,7 @@ def _report(args, scancode_report, _files):
     report['conclusion']['project_version'] = args['project_version']
     report['conclusion']['project_url'] = args['project_url']
     report['conclusion']['copyright'] = c_list
-    report['conclusion']['license_expression'] = lic_expr
+    report['conclusion']['license_expression'] = json_compat_lic
     #report['conclusion']['license_expression_spdx'] = spdx_expr
     report['conclusion']['included_files_count'] = len(_files['included'])
     report['conclusion']['excluded_files_count'] = len(_files['excluded'])
@@ -722,12 +731,13 @@ def _output_files(files):
     with_copyright = False
     for f in files['included']:
         if with_copyright:
-            print(str(f['name']) + " [" + f['license'] + "] [", end="" )
+            print(str(f['name']) + " [" + f['license_key'] + "] [", end="" )
             for c in f['copyright']:
                 print(str(c), end="" )
             print("]")
         else:
-            print(str(f['name']) + " [" + f['license'] + "]")
+            print("f: " + str(f['name']))
+            print(str(f['name']) + " [" + f['license_key'] + "]")
 
 
 def _output_verbose_file(files, verbose_file):
@@ -825,7 +835,10 @@ def _read_merge_args(args):
 
 def _using_hide_args(args):
     keys = set()
-    for k,v in args.items():
+    HIDE_OPTIONS = ['hide_licenses', 'hide_only_licenses', ]
+    #for k,v in args.items():
+    for k in HIDE_OPTIONS:
+        v = args[k]
         if "hide" in k and not (v == None or v == []):
             print("key: " + str(k) + " value: " + str(v))
             keys.add(k)
@@ -928,11 +941,11 @@ def main():
         print("Curated and validated files:")
         _output_files(curated)
         print("License and copyright:")
-        print("license:   " + str(report['conclusion']['license_key']))
+        print("license:   " + str(report['conclusion']['license_expression']))
         print("copyright: " + str(report['conclusion']['copyright']))
         exit(0)
 
-    print(json.dumps(report))
+    print(json.dumps(report, indent=2))
         
 
     
