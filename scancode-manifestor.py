@@ -162,14 +162,30 @@ def parse():
                         help='hide files from output when in filtered mode',
                         default=False)
     
+    parser.add_argument('-sef', '--show-excluded-files',
+                        action='store_true',
+                        dest='show_excluded_files',
+                        help='show excluded files when in filter mode',
+                        default=False)
+    
     parser.add_argument('-i', '--input-file',
                         dest='input_file',
                         help='read input from file',
                         default=None)
 
+    parser.add_argument('-vf', '--verbose-file',
+                        dest='verbose_file',
+                        help='outpur all scancode information about file',
+                        default=None)
+
     parser.add_argument('-pn', '--project-name',
                         dest='project_name',
                         help='specify name of project',
+                        default=None)
+
+    parser.add_argument('-spn', '--package-name',
+                        dest='sub_package_name',
+                        help='specify name of sub package in project',
                         default=None)
 
     parser.add_argument('-pv', '--project-version',
@@ -192,13 +208,15 @@ def parse():
     parser.add_argument('-hl', '--hide-licenses',
                         dest='hide_licenses',
                         type=str,
+                        action='append',
                         nargs="+",
                         help="excluded licenses (if set, remove file/dir from printout)",
                         default=[])
 
-    parser.add_argument('-il', '--include-licenses',
-                        dest='included_licenses',
+    parser.add_argument('-sl', '--show-licenses',
+                        dest='show_licenses',
                         type=str,
+                        action='append',
                         nargs="+",
                         help="included licenses (if set, remove file/dir from printout)",
                         default=[])
@@ -392,6 +410,7 @@ def _extract_license(f):
 def _extract_license_spdx(f):
     licenses = set()
     for lic in f['licenses']:
+        #print("Add license key: " + f['path'] + " " + lic['key'])
         licenses.add(lic['spdx_license_key'])
     return licenses
 
@@ -409,9 +428,10 @@ def _obsolete_extract_license(f):
             licenses.add(lic['key'])
     return licenses
 
-def _dir_licenses(files, dir):
+def _dir_licenses(_files, dir, key):
     licenses = set()
     dir_name = dir['path']
+    files = _files[key]
     verbose("_dir_licenses: " + dir_name)
     for f in files:
         file_name = f['path']
@@ -445,7 +465,7 @@ def _obsoleted_summarize(_files):
     summary['copyright'] = copyrights_list
     return summary
 
-def _filter(files, included_regexps, excluded_regexps, included_licenses, hide_licenses, hide_only_licenses):
+def _filter(files, included_regexps, excluded_regexps, show_licenses, hide_licenses, hide_only_licenses):
     for regexp_list in included_regexps:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -458,11 +478,12 @@ def _filter(files, included_regexps, excluded_regexps, included_licenses, hide_l
             verbose(" * exclude file:    " + regexp)
             files = _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
     
-    for regexp_list in included_licenses:
+    for regexp_list in show_licenses:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * include license: " + regexp)
             files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE)
+            
     for regexp_list in hide_licenses:
         verbose("Exclude file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -631,33 +652,34 @@ def _scancode_report_files_count(scancode_report):
 def _report(args, scancode_report, _files):
     copyrights = set()
     licenses = set()
+    spdx = set()
     files = _files['included']
     
     for f in files:
-        verbose("collecting info " + str(f['name']) + " " + f['license_key'])
+        verbose("collecting info " + str(f['name']) + " " + str(f['license_key']))
         for c in f['copyright']:
             copyrights.add(c)
-        print("adding key... " + str(f['license_key']))
         licenses.add(f['license_key'])
-        exit(0)
+        spdx.add(f['license_spdx'])
         
     lic_expr = None
+    #print("licenses: " + str(licenses))
     for lic in licenses:
         if lic_expr == None:
             lic_expr = ""
         else:
             lic_expr += " and "
         
-        lic_expr += lic
+        lic_expr += str(lic)
 
     spdx_expr = None
-    for lic in licenses:
+    for lic in spdx:
         if spdx_expr == None:
             spdx_expr = ""
         else:
             spdx_expr += " and "
         
-        spdx_expr += lic
+        spdx_expr += str(lic)
 
     c_list = list(copyrights)
     c_list.sort()
@@ -672,7 +694,7 @@ def _report(args, scancode_report, _files):
     report['conclusion']['project_url'] = args['project_url']
     report['conclusion']['copyright'] = c_list
     report['conclusion']['license_expression'] = lic_expr
-    report['conclusion']['license_expression_spdx'] = spdx_expr
+    #report['conclusion']['license_expression_spdx'] = spdx_expr
     report['conclusion']['included_files_count'] = len(_files['included'])
     report['conclusion']['excluded_files_count'] = len(_files['excluded'])
     report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
@@ -700,22 +722,31 @@ def _output_files(files):
         else:
             print(str(f['name']) + " [" + f['license'] + "]")
 
+
+def _output_verbose_file(files, verbose_file):
+    for key in [ 'included', 'excluded']:
+        for f in files[key]:
+            if verbose_file == f['path']:
+                print(json.dumps(f, indent=2))
+                return
+
 def _output_filtered_helper(files, show_files=True, show_dirs=False, file_key='included', stream=sys.stdout):
     for f in files[file_key]:
         if show_files and _isfile(f):
             licenses = list(_extract_license(f))
             print(" f " + f['path'] + " " + str(licenses), file=stream)
         elif show_dirs and _isdir(f):
-            licenses = list(_dir_licenses(files, f))
+            licenses = list(_dir_licenses(files, f, file_key))
             print(" d " + f['path'] + " " + str(licenses), file=stream)
 
 
-def _output_filtered(files, stream=sys.stdout):
-    print("Excluded  " + str(_count_files(files['excluded'])))
-    _output_filtered_helper(files, True, False, 'excluded', stream)
+def _output_filtered(files, show_files=True, show_dirs=False, stream=sys.stdout, show_excluded=False):
+    if show_excluded:
+        print("Excluded  " + str(_count_files(files['excluded'])))
+        _output_filtered_helper(files, show_files, show_dirs, 'excluded', stream)
 
     print("Included  " + str(_count_files(files['included'])))
-    _output_filtered_helper(files, True, False, 'included', stream)
+    _output_filtered_helper(files, show_files, show_dirs, 'included', stream)
 
     
 def _get_config_file_name(args):
@@ -723,7 +754,12 @@ def _get_config_file_name(args):
         return args['output']
     if args['generate_output_name'] != None:
         if args['project_name'] != None and args['project_version'] != None:
-            return args['project_name'] + "-" + args['project_version'] + "-conclusion.json"
+            name = args['project_name'] + "-"
+            sub_pkg =args['sub_package_name'] + "-"
+            if sub_pkg == None:
+                sub_pkg = ""
+            version = args['project_version'] + "-"
+            return name + sub_pkg + version + "-conclusion.json"
         else:
             warn("Missing project information. Can't generate output file name")
             # TODO: throw exception instead of exit
@@ -779,12 +815,20 @@ def _read_merge_args(args):
     for k,v in new_args.items():
         verbose(" * " + str(k) + ": " + str(new_args[k]))
     return new_args
-    
+
+def _using_hide_args(args):
+    keys = set()
+    for k,v in args.items():
+        if "hide" in k and not (v == None or v == []):
+            print("key: " + str(k) + " value: " + str(v))
+            keys.add(k)
+    return keys
+
 def main():
     parsed_args = parse()
 
     args = parsed_args.__dict__
-    
+
     #print("command line: " + str(sys.argv))
     #print("command line: " + str(parsed_args.mode))
     #exit(0)
@@ -795,12 +839,16 @@ def main():
     #
     if args['config'] != None:
         args = _read_merge_args(args)
-
     
     #
     # if config mode - dump args and leave
     #
     if args['mode'] == MODE_CONFIG:
+        keys = _using_hide_args(args)
+        if keys != set():
+            error("Can't save config file if hide options are used. Remove the following options from your command line and try again: " + str(keys))
+            exit(2)
+            
         output_args_to_file(args)
         exit(0)
 
@@ -819,15 +867,22 @@ def main():
     #
     # filter files
     #
-    filtered =_filter(files, args['included_regexps'], args['excluded_regexps'], args['included_licenses'], args['hide_licenses'], args['hide_only_licenses'])
+    filtered = _filter(files, args['included_regexps'], args['excluded_regexps'], args['show_licenses'], args['hide_licenses'], args['hide_only_licenses'])
 
     #
     # if filter mode - this is the final step in the pipe
     #
     if args['mode'] == MODE_FILTER:
-        _output_filtered(filtered, sys.stdout)
+        if args['verbose_file']:
+            _output_verbose_file(files, args['verbose_file'])
+        else:
+            _output_filtered(filtered, args['hide_files']==False, args['show_directories'], sys.stdout, args['show_excluded_files'])
         exit(0)
 
+    keys = _using_hide_args(args)
+    if keys != set():
+        error("Hide options are only allowed in filter mode. Remove the following options from your command line and try again: " + str(keys))
+        exit(2)
 
     #
     # Continue with pipe, but first verbose files
