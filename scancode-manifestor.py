@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import subprocess
+import datetime
 from enum import Enum
 from license_expression import Licensing
 
@@ -48,7 +49,7 @@ PROGRAM_NAME = "scancode-analyser.py"
 PROGRAM_DESCRIPTION = "A tool to create package manifests from a Scancode report"
 PROGRAM_AUTHOR = "Henrik Sandklef"
 COMPLIANCE_UTILS_VERSION="__COMPLIANCE_UTILS_VERSION__"
-PROGRAM_URL="https://github.com/vinland-technology/compliance-utils"
+PROGRAM_URL="https://github.com/vinland-technology/scancode-manifestor"
 PROGRAM_COPYRIGHT="(c) 2021 Henrik Sandklef<hesa@sandklef.com>"
 PROGRAM_LICENSE="GPL-3.0-or-later"
 PROGRAM_SEE_ALSO=""
@@ -67,9 +68,11 @@ if COMPLIANCE_UTILS_VERSION == "__COMPLIANCE_UTILS_VERSION__":
 VERBOSE=False
 
 MODE_FILTER      = "filter"
-MODE_REPORT      = "report"
 MODE_VALIDATE    = "validate"
+MODE_REPORT      = "report"
+MODE_CONFIG      = "config"
 
+ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_REPORT, MODE_CONFIG ]
 DEFAULT_MODE=MODE_FILTER
 
 class FilterAttribute(Enum):
@@ -104,7 +107,8 @@ def parse():
     description = description + "DESCRIPTION\n  " + PROGRAM_DESCRIPTION + "\n\n"
     
     epilog = ""
-    epilog = epilog + "AUTHOR\n  " + PROGRAM_AUTHOR + "\n\n"
+    epilog = epilog + "PROJECT PAGE\n  " + PROGRAM_URL + "\n\n"
+    epilog = epilog + "AUTHORS\n  " + PROGRAM_AUTHOR + "\n\n"
     epilog = epilog + "REPORTING BUGS\n  File a ticket at " + PROGRAM_URL + "\n\n"
     epilog = epilog + "COPYRIGHT\n  Copyright " + PROGRAM_COPYRIGHT + ".\n  License " + PROGRAM_LICENSE + "\n\n"
     epilog = epilog + "SEE ALSO\n  " + PROGRAM_SEE_ALSO + "\n\n"
@@ -117,7 +121,7 @@ def parse():
     )
 
     parser.add_argument('mode',
-                        help='Specify execution mode. Default mode: ' + DEFAULT_MODE ,
+                        help='Specify execution mode (' + str(ALL_MODES) + '). Default mode: ' + DEFAULT_MODE ,
                         nargs='?',
                         default=DEFAULT_MODE)
 
@@ -603,9 +607,14 @@ def _report(args, scancode_report, _files):
     report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
     report['meta']={}
     report['meta']['arguments'] = args.__dict__
+    report['meta']['report_date'] = str(datetime.datetime.now())
     report['meta']['scancode_report'] = args.file
 
     return report
+
+def _output_args(args):
+    print(json.dumps(report))
+
 
 def _output_files(files):
     # TODO: also output command line arg
