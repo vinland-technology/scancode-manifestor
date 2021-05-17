@@ -703,9 +703,17 @@ def _report(args, scancode_report, _files):
           
     
     report = {}
+    
+    #
+    # Files
+    #
     report['files'] = {}
     report['files']['included'] = _files['included']
     report['files']['excluded'] = _files['excluded']
+
+    #
+    # Conclusion
+    #
     report['conclusion'] = {}
     report['conclusion']['project_name'] = args['project_name']
     report['conclusion']['project_version'] = args['project_version']
@@ -716,6 +724,10 @@ def _report(args, scancode_report, _files):
     report['conclusion']['included_files_count'] = len(_files['included'])
     report['conclusion']['excluded_files_count'] = len(_files['excluded'])
     report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
+
+    #
+    # Meta information
+    #
     report['meta']={}
     report['meta']['arguments'] = args #.__dict__
     report['meta']['report_date'] = str(datetime.datetime.now())
