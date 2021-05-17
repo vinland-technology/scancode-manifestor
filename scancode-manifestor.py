@@ -130,10 +130,10 @@ def parse():
                         help='output verbose information to stderr',
                         default=False)
     
-    parser.add_argument('-f', '--force',
+    parser.add_argument('-fc', '--force-config',
                         action='store_true',
-                        dest='forced_mode',
-                        help='used forced mode',
+                        dest='forced_config_mode',
+                        help='force save config file',
                         default=False)
     
     parser.add_argument('-o', '--output',
@@ -837,7 +837,7 @@ def output_args_to_file(args):
     verbose("Storing config to: \"" + str(out_file) + "\"")
     if out_file != None:
         if os.path.isfile(out_file):
-            if not args['forced_mode']:
+            if not args['forced_config_mode']:
                 warn("File '" + out_file + "' already exists. Remove it, use another name or use forced mode (-f))")
                 exit(1)
         sys.stdout = open(out_file, 'w')
