@@ -36,7 +36,7 @@ scanned source code. In order to create a manifest from a Scancode report we nee
 
 * **hide** - when in `filter` mode, you can hide files from being outputed. These files are not excluded form the distributed file. This is useful when resolving problems (which you do in filter mode). If the file is not distributed, use `exclude` instead.
 
-* **exclude* - you typically mark a files as excluded when the files will not end up being distributed. If you just want to not see the file (in filter mode), use `hide` instead. You can use this in combination with `include`.
+* **exclude** - you typically mark a files as excluded when the files will not end up being distributed. If you just want to not see the file (in filter mode), use `hide` instead. You can use this in combination with `include`.
 
 * **include** - same as `exclude` but rather the opposite. This specifies which files actually are distributed. You can use this in combination with `exclude`.
 
