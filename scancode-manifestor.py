@@ -198,6 +198,21 @@ def parse():
                         help='specify url to the project',
                         default=None)
 
+    parser.add_argument('-psu', '--project-source-url',
+                        dest='project_source_url',
+                        help="specify url to the source code of the projet",
+                        default=None)
+
+    parser.add_argument('-piu', '--project-issue-url',
+                        dest='project_issue_url',
+                        help="url to the issue tracker of the projet",
+                        default=None)
+
+    parser.add_argument('-pdu', '--project-download-url',
+                        dest='project_download_url',
+                        help="specify url to the source code of the scanned version of the projet",
+                        default=None)
+
     # ?
     parser.add_argument('-ic', '--include-copyrights',
                         dest='include_copyrights',
@@ -626,8 +641,8 @@ def _validate(files, report):
     warnings = []
     included_files = files['included']
 
-    orig_file_count = report['conclusion']['original_files_count']['files']
-    report_file_count = report['conclusion']['included_files_count'] + report['conclusion']['excluded_files_count']
+    orig_file_count = report['files']['original_files_count']['files']
+    report_file_count = report['files']['included_files_count'] + report['files']['excluded_files_count']
     if orig_file_count != report_file_count:
         errors.append("Files in report (" + report_file_count + ") not the same as scancode report (" + orig_file_count + ")")
         
@@ -710,20 +725,29 @@ def _report(args, scancode_report, _files):
     report['files'] = {}
     report['files']['included'] = _files['included']
     report['files']['excluded'] = _files['excluded']
+    report['files']['included_files_count'] = len(_files['included'])
+    report['files']['excluded_files_count'] = len(_files['excluded'])
+    report['files']['original_files_count'] = _scancode_report_files_count(scancode_report)
 
+    #
+    # Project
+    #
+    project = {}
+    project['name'] = args['project_name']
+    project['sub_package'] = args['sub_package_name']
+    project['version'] = args['project_version']
+    project['url'] = args['project_url']
+    project['source_url'] = args['project_source_url']
+    project['issue_url'] = args['project_issue_url']
+    project['download_url'] = args['project_download_url']
+    report['project'] = project
+    
     #
     # Conclusion
     #
     report['conclusion'] = {}
-    report['conclusion']['project_name'] = args['project_name']
-    report['conclusion']['project_version'] = args['project_version']
-    report['conclusion']['project_url'] = args['project_url']
     report['conclusion']['copyright'] = c_list
     report['conclusion']['license_expression'] = json_compat_lic
-    #report['conclusion']['license_expression_spdx'] = spdx_expr
-    report['conclusion']['included_files_count'] = len(_files['included'])
-    report['conclusion']['excluded_files_count'] = len(_files['excluded'])
-    report['conclusion']['original_files_count'] = _scancode_report_files_count(scancode_report)
 
     #
     # Meta information
