@@ -289,6 +289,12 @@ def parse():
                         help="missing license curation",
                         default=None)
 
+    parser.add_argument('-ol', '--outbound-license',
+                        dest='outbound_license',
+                        type=str,
+                        help="chose outbound license (must be a valid choice)",
+                        default=None)
+
     parser.add_argument('-V', '--version',
                         action='version',
                         version=COMPLIANCE_UTILS_VERSION,
@@ -636,7 +642,7 @@ def _count_files(files):
             cnt += 1
     return cnt
 
-def _validate(files, report):
+def _validate(files, report, outbound_license):
     errors = []
     warnings = []
     included_files = files['included']
@@ -646,8 +652,6 @@ def _validate(files, report):
     if orig_file_count != report_file_count:
         errors.append("Files in report (" + report_file_count + ") not the same as scancode report (" + orig_file_count + ")")
         
-    
-    
     for f in included_files:
         verbose("validating " + str(f['name']))
         if f['name'] == None or f['name'] == "":
@@ -657,6 +661,11 @@ def _validate(files, report):
         if f['copyright'] == None or f['copyright'] == []:
             warnings.append("Warning for " + f['name'] + ": copyright can't be None or [].")
 
+    
+    if outbound_license:
+        outbound_ok =_verify_outbound_license(outbound_license, report['conclusion']['license_expression'])
+        warning("Chosing license is experimental.  No checks are done")
+        
     ret = {}
     ret['errors'] = errors
     ret['warnings'] = warnings
@@ -882,6 +891,12 @@ def _using_hide_args(args):
             keys.add(k)
     return keys
 
+def _verify_outbound_license(lic, project_license):
+    verbose("verifying license: " + str(lic))
+    verbose(" * with: " + str(project_license))
+    # TODO: add proper implementation
+    return True
+          
 def main():
     parsed_args = parse()
 
@@ -967,7 +982,7 @@ def main():
     # validate
     #
     report = _report(args, scancode_report, curated)
-    validation =_validate(curated, report)
+    validation =_validate(curated, report, args['outbound_license'])
     if validation['errors'] != []:
         for err in validation['errors']:
             error(err)
