@@ -35,7 +35,7 @@ class ManifestorCompleter:
         results =  [x for x in self.manifestor if x.startswith(text)] + [None]
         return results[state]
 
-words = ['alac','alac-master','include-file','exclude-file','alac/alac-master','slug','snail']
+words = ['abac','abac-master','include-file','exclude-file','abac/abac-master']
 completer = ManifestorCompleter(words)
 
 #print("delims: " + str(readline.get_completer_delims()))
