@@ -23,23 +23,22 @@ from enum import Enum
 from license_expression import Licensing
 
 
-#import rlcompleter
 import readline
 readline.parse_and_bind('tab: complete')
-readline.parse_and_bind('set editing-mode vi')
+#readline.parse_and_bind('set editing-mode vi')
 
-class VolcabCompleter:
-    def __init__(self,volcab):
-        self.volcab = volcab
+class ManifestorCompleter:
+    def __init__(self,manifestor):
+        self.manifestor = manifestor
 
     def complete(self,text,state):
-        results =  [x for x in self.volcab if x.startswith(text)] + [None]
+        results =  [x for x in self.manifestor if x.startswith(text)] + [None]
         return results[state]
 
 words = ['alac','alac-master','include-file','exclude-file','alac/alac-master','slug','snail']
-completer = VolcabCompleter(words)
+completer = ManifestorCompleter(words)
 
-print("delims: " + str(readline.get_completer_delims()))
+#print("delims: " + str(readline.get_completer_delims()))
 readline.set_completer_delims(' ')
 
 #readline.set_completer(completer.complete)
