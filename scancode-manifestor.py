@@ -4,7 +4,7 @@
 #
 # Scancode report -> manifest creator
 #
-# SPDX-FileCopyrightText: 2020 Henrik Sandklef
+# SPDX-FileCopyrightText: 2021 Henrik Sandklef
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -23,6 +23,29 @@ from enum import Enum
 from license_expression import Licensing
 
 
+#import rlcompleter
+import readline
+readline.parse_and_bind('tab: complete')
+readline.parse_and_bind('set editing-mode vi')
+
+class VolcabCompleter:
+    def __init__(self,volcab):
+        self.volcab = volcab
+
+    def complete(self,text,state):
+        results =  [x for x in self.volcab if x.startswith(text)] + [None]
+        return results[state]
+
+words = ['alac','alac-master','include-file','exclude-file','alac/alac-master','slug','snail']
+completer = VolcabCompleter(words)
+
+print("delims: " + str(readline.get_completer_delims()))
+readline.set_completer_delims(' ')
+
+#readline.set_completer(completer.complete)
+
+
+OBSOLETE = True
 #
 # The scancode reports goes through parts of the pipe below:
 #
@@ -71,8 +94,9 @@ MODE_FILTER      = "filter"
 MODE_VALIDATE    = "validate"
 MODE_CREATE      = "create"
 MODE_CONFIG      = "config"
+MODE_INTERACTIVE = "interactive"
 
-ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_CREATE, MODE_CONFIG ]
+ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_CREATE, MODE_CONFIG, MODE_INTERACTIVE ]
 DEFAULT_MODE=MODE_FILTER
 
 class FilterAttribute(Enum):
@@ -88,6 +112,10 @@ class FilterModifier(Enum):
     ANY   = 1
     ONLY  = 2
 
+INTERACTIVE_COMMAND_EXCLUDE_FILE="exclude-file"
+INTERACTIVE_COMMAND_INCLUDE_FILE="include-file"
+INTERACTIVE_COMMAND_LIST_INCLUDED="list-included"
+    
 def error(msg):
     sys.stderr.write(msg + "\n")
 
@@ -137,6 +165,7 @@ def parse():
                         default=False)
     
     parser.add_argument('-o', '--output',
+                        dest='output',
                         help='output to file',
                         default=None)
     
@@ -380,25 +409,77 @@ def _files_map(included_files, excluded_files):
     files_map['excluded'] = excluded_files
     return files_map
 
-    
-def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
-    #print(" * filter: " + str(files))
-    filtered = []
-    ignored = files['excluded']
 
-    for f in files['included']:
-        #_match_generic(f, None,           'path', regexpr, only)
-        #_match_generic(f, ["license_expressions"], '', regexpr, only)
-        #_match_generic(f, ["copyrights"], ['key'],     regexpr, only)
+def _handle_filter_action(action, files, args):
+    tokens = action.split(" ")
+    command = tokens[0]
+    #print("exclude stuff....: " + command)
+    tokens.pop(0)
+    #for t in tokens:
+    #    print("  expr  : " + t)
+    if command == INTERACTIVE_COMMAND_EXCLUDE_FILE:
+        args['excluded_regexps'].append(tokens)
+    elif command == INTERACTIVE_COMMAND_INCLUDE_FILE:
+        args['included_regexps'].append(tokens)
+    return 0
+
+def _parse_action(action, files, args):
+    print("parse: \"" + action + "\"")
+    if action.startswith("bye"):
+        return 1
+    elif action.startswith(INTERACTIVE_COMMAND_LIST_INCLUDED):
+        print("Included files:")
+        filtered = _filter(files.copy(), args['included_regexps'], args['excluded_regexps'])
+        _output_filtered(filtered,
+                         args['hide_files']==False,
+                         args['show_directories'],
+                         sys.stdout,
+                         args['show_excluded_files'],
+                         None)
+    elif action.startswith(INTERACTIVE_COMMAND_EXCLUDE_FILE) or \
+         action.startswith(INTERACTIVE_COMMAND_INCLUDE_FILE):
+        return _handle_filter_action(action, files, args)
+    else:
+        print("miss...")
+        return 2
+
+def _interact(files, args):
+    while True:
+        action = input("scancode-manfestor: ")
+        print("You typed: " + action)
+        action_result = _parse_action(action.strip(), files, args)
+        if action_result == 1:
+            return 
+
+def _match_file(f, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
         if isinstance(regexpr, list):
-            verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
+            print("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
             match = True
             for re in regexpr:
                 match = match and _match_generic(f, filter, re, only)
                 verbose("   re:" + str(re) + "  ==> " + str(match))
             verbose("   ===================> " + str(match))
         else:
+            verbose(" match single : " + str(f['name']) + " " + str(f['license_expressions']) + " " + str(filter) + " " + str(regexpr))
             match = _match_generic(f, filter, regexpr, only)
+        return match
+
+def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
+    #print(" * filter: " + str(files))
+    filtered = []
+    ignored = files['excluded']
+
+    for f in files['included']:
+        match = _match_file(f, filter, regexpr)
+#        if isinstance(regexpr, list):
+#            verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
+#            match = True
+#            for re in regexpr:
+#                match = match and _match_generic(f, filter, re, only)
+#                verbose("   re:" + str(re) + "  ==> " + str(match))
+#            verbose("   ===================> " + str(match))
+#        else:
+#            match = _match_generic(f, filter, regexpr, only)
             
         #print("match " + str(f['path'] + " " + str(f['license_expressions']) + " " + str(regexpr) + ": " + str(match)))
         # store in list if either:
@@ -413,7 +494,8 @@ def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=F
                 filtered.append(f)
             else:
                 verbose("filter include, ignoring: " + str(f['name']))
-                ignored.append(f)
+                if not f in ignored:
+                    ignored.append(f)
                 
         elif not match:
             if include==FilterAction.EXCLUDE:
@@ -421,7 +503,8 @@ def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=F
                 filtered.append(f)
             else:
                 verbose("filter exclude, ignoring: " + str(f['name']))
-                ignored.append(f)
+                if not f in ignored:
+                    ignored.append(f)
 
     return _files_map(filtered, ignored)
 
@@ -495,7 +578,8 @@ def _obsoleted_summarize(_files):
     summary['copyright'] = copyrights_list
     return summary
 
-def _filter(files, included_regexps, excluded_regexps, show_licenses, hide_licenses, hide_only_licenses):
+def _filter(_files, included_regexps, excluded_regexps):
+    files = _files
     for regexp_list in included_regexps:
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
@@ -507,22 +591,23 @@ def _filter(files, included_regexps, excluded_regexps, show_licenses, hide_licen
         for regexp in regexp_list:
             verbose(" * exclude file:    " + regexp)
             files = _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
-    
-    for regexp_list in show_licenses:
-        verbose("Include file:    " + str(regexp_list))
-        for regexp in regexp_list:
-            verbose(" * include license: " + regexp)
-            files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE)
-            
-    for regexp_list in hide_licenses:
-        verbose("Exclude file:    " + str(regexp_list))
-        for regexp in regexp_list:
-            verbose(" * exclude license: " + regexp)
-            files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
 
-    for regexp_list in hide_only_licenses:
-        verbose("Exclude only license: " + str(regexp_list))
-        files = _filter_generic(files, FilterAttribute.LICENSE, regexp_list, FilterAction.EXCLUDE, FilterModifier.ANY)
+    if OBSOLETE == False:
+        for regexp_list in show_licenses:
+            verbose("Include licenses:    " + str(regexp_list))
+            for regexp in regexp_list:
+                verbose(" * include license: " + regexp)
+                files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE)
+
+        for regexp_list in hide_licenses:
+            verbose("Exclude file:    " + str(regexp_list))
+            for regexp in regexp_list:
+                verbose(" * exclude license: " + regexp)
+                files = _filter_generic(files, FilterAttribute.LICENSE, regexp, FilterAction.EXCLUDE)
+
+        for regexp_list in hide_only_licenses:
+            verbose("Exclude only license: " + str(regexp_list))
+            files = _filter_generic(files, FilterAttribute.LICENSE, regexp_list, FilterAction.EXCLUDE, FilterModifier.ANY)
 
     return files
 
@@ -650,7 +735,7 @@ def _validate(files, report, outbound_license):
     orig_file_count = report['files']['original_files_count']['files']
     report_file_count = report['files']['included_files_count'] + report['files']['excluded_files_count']
     if orig_file_count != report_file_count:
-        errors.append("Files in report (" + report_file_count + ") not the same as scancode report (" + orig_file_count + ")")
+        errors.append("Files in report (" + str(report_file_count) + ") not the same as scancode report (" + str(orig_file_count) + ")")
         
     for f in included_files:
         verbose("validating " + str(f['name']))
@@ -794,23 +879,74 @@ def _output_verbose_file(files, verbose_file):
                 print(json.dumps(f, indent=2))
                 return
 
-def _output_filtered_helper(files, show_files=True, show_dirs=False, file_key='included', stream=sys.stdout):
+
+
+            
+def _output_single_file(f, stream=sys.stdout, hiders=None):
+    hide_licenses     = None
+    hide_only_license = None
+
+    #print("")
+    #print("_output_single_file: " + str(hiders))
+    #print("info: " + str(f['name']) + " "  + str(f['license_expressions']))
+    
+    if hiders != None:
+        hide_licenses = hiders['hide_licenses']
+        hide_only_licenses = hiders['hide_only_licenses']
+        show_licenses = hiders['show_licenses']
+    else:
+        hide_licenses = []
+        hide_only_licenses = []
+        show_licenses = []
+        
+    licenses  = list(_extract_license(f))
+    # empty show license list => show=True
+    show_file = show_licenses == []
+    #print("show_file: " + str(show_file))
+    
+    for regexp_list in show_licenses:
+        verbose(" * Show licenses:    " + str(regexp_list))
+        for regexp in regexp_list:
+            match = _match_file(f, FilterAttribute.LICENSE, regexp)
+            # any match => show_file becomes True
+            show_file = show_file or match
+            verbose("    * show license: " + regexp + " ==> " + str(match))
+
+    for regexp_list in hide_licenses:
+        verbose(" * Hide licenses:    " + str(regexp_list))
+        for regexp in regexp_list:
+            match = _match_file(f, FilterAttribute.LICENSE, regexp)
+            if match:
+                show_file = False
+            verbose("    * hide license: " + regexp + " ==> " + str(match))
+
+
+    if show_file:
+        print(" f " + f['path'] + " " + str(licenses), file=stream)
+    else:
+        print("                     hide " + f['path'] + " " + str(licenses), file=stream)
+    
+def _output_single(f, show_files=True, show_dirs=False, file_key='included', stream=sys.stdout, hiders=None):
+
+    if show_files and _isfile(f):
+        _output_single_file(f, stream, hiders)
+    elif show_dirs and _isdir(f):
+        licenses = list(_dir_licenses(files, f, file_key))
+        print(" d " + f['path'] + " " + str(licenses), file=stream)
+        
+            
+def _output_filtered_helper(files, show_files=True, show_dirs=False, file_key='included', stream=sys.stdout, hiders=None):
     for f in files[file_key]:
-        if show_files and _isfile(f):
-            licenses = list(_extract_license(f))
-            print(" f " + f['path'] + " " + str(licenses), file=stream)
-        elif show_dirs and _isdir(f):
-            licenses = list(_dir_licenses(files, f, file_key))
-            print(" d " + f['path'] + " " + str(licenses), file=stream)
+        _output_single(f, show_files, show_dirs, file_key, stream, hiders)
 
 
-def _output_filtered(files, show_files=True, show_dirs=False, stream=sys.stdout, show_excluded=False):
+def _output_filtered(files, show_files=True, show_dirs=False, stream=sys.stdout, show_excluded=False, hiders=None):
     if show_excluded:
         print("Excluded  " + str(_count_files(files['excluded'])))
-        _output_filtered_helper(files, show_files, show_dirs, 'excluded', stream)
+        _output_filtered_helper(files, show_files, show_dirs, 'excluded', stream, hiders)
 
     print("Included  " + str(_count_files(files['included'])))
-    _output_filtered_helper(files, show_files, show_dirs, 'included', stream)
+    _output_filtered_helper(files, show_files, show_dirs, 'included', stream, hiders)
 
     
 def _get_config_file_name(args):
@@ -896,7 +1032,9 @@ def _verify_outbound_license(lic, project_license):
     verbose(" * with: " + str(project_license))
     # TODO: add proper implementation
     return True
-          
+
+
+
 def main():
     parsed_args = parse()
 
@@ -925,10 +1063,19 @@ def main():
         output_args_to_file(args)
         exit(0)
 
+    # check inconsistent arguments
+    if args['mode'] == MODE_INTERACTIVE and args['output'] == None:
+        error("When in acteractive mode you must specify a file name for the manifest")
+        exit(3)
+        
 
     #
     # SETUP 
     #
+    hiders = {}
+    hiders['hide_licenses']      = args['hide_licenses']
+    hiders['hide_only_licenses'] = args['hide_only_licenses']
+    hiders['show_licenses'] = args['show_licenses']
     
     # Open scancode report
     with open(args['input_file']) as fp:
@@ -937,19 +1084,24 @@ def main():
     # Setup files map
     files = _setup_files(scancode_report['files'])
 
+    if args['mode'] == MODE_INTERACTIVE:
+        #print("excluded: " + str(args['excluded_regexps']))
+        _interact(files, args)
+        #print("excluded: " + str(args['excluded_regexps']))
+    
     #
     # filter files
     #
-    filtered = _filter(files, args['included_regexps'], args['excluded_regexps'], args['show_licenses'], args['hide_licenses'], args['hide_only_licenses'])
-
-    #
-    # if filter mode - this is the final step in the pipe
-    #
+    filtered = _filter(files, args['included_regexps'], args['excluded_regexps'])
+        
     if args['mode'] == MODE_FILTER:
+        #
+        # if filter mode - this is the final step in the pipe
+        #
         if args['verbose_file']:
             _output_verbose_file(files, args['verbose_file'])
         else:
-            _output_filtered(filtered, args['hide_files']==False, args['show_directories'], sys.stdout, args['show_excluded_files'])
+            _output_filtered(filtered, args['hide_files']==False, args['show_directories'], sys.stdout, args['show_excluded_files'], hiders)
         exit(0)
 
     keys = _using_hide_args(args)
@@ -962,7 +1114,7 @@ def main():
     #
     if args['verbose']:
         verbose("---- filtered files -----")
-        _output_filtered(filtered, sys.stderr)
+        _output_filtered(filtered, sys.stderr, hiders)
 
     #
     # transform to intermediate format
@@ -970,7 +1122,7 @@ def main():
     transformed = _transform_files(filtered)
     if args['verbose']:
         verbose("---- transformed files -----")
-        _output_filtered(transformed, sys.stderr)
+        _output_filtered(transformed, sys.stderr, hiders)
     #print(json.dumps((transformed)))
 
     #
@@ -998,7 +1150,11 @@ def main():
         print("copyright: " + str(report['conclusion']['copyright']))
         exit(0)
 
-    print(json.dumps(report, indent=2))
+    if args['output'] != None:
+        with open(args['output'], "w") as manifest_file:
+            json.dump(report, manifest_file) 
+    else:
+        print(json.dumps(report, indent=2))
         
 
     
