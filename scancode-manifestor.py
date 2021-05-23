@@ -35,13 +35,10 @@ class ManifestorCompleter:
         results =  [x for x in self.manifestor if x.startswith(text)] + [None]
         return results[state]
 
-words = ['abac','abac-master','include-file','exclude-file','abac/abac-master']
-completer = ManifestorCompleter(words)
+
 
 #print("delims: " + str(readline.get_completer_delims()))
-readline.set_completer_delims(' ')
 
-#readline.set_completer(completer.complete)
 
 
 OBSOLETE = True
@@ -111,10 +108,15 @@ class FilterModifier(Enum):
     ANY   = 1
     ONLY  = 2
 
-INTERACTIVE_COMMAND_EXCLUDE_FILE="exclude-file"
-INTERACTIVE_COMMAND_INCLUDE_FILE="include-file"
-INTERACTIVE_COMMAND_LIST_INCLUDED="list-included"
-    
+COMMAND_EXCLUDE_FILE="exclude-files"
+COMMAND_SHORT_EXCLUDE_FILE="ef"
+COMMAND_INCLUDE_FILE="include-files"
+COMMAND_SHORT_INCLUDE_FILE="if"
+COMMAND_LIST_INCLUDED="list-included"
+COMMAND_LIST_EXCLUDED="list-excluded"
+
+INTERACTIVE_COMMANDS = [ COMMAND_EXCLUDE_FILE, COMMAND_SHORT_EXCLUDE_FILE, COMMAND_INCLUDE_FILE, COMMAND_SHORT_INCLUDE_FILE, COMMAND_LIST_INCLUDED, COMMAND_LIST_EXCLUDED ]
+
 def error(msg):
     sys.stderr.write(msg + "\n")
 
@@ -279,7 +281,7 @@ def parse():
                         help="exclude exact unknown licenses (if they appear as only license) (if set, remove file/dir from printout)",
                         default=None)
 
-    parser.add_argument('-ef', '--exclude-files',
+    parser.add_argument('-' + COMMAND_SHORT_EXCLUDE_FILE, '--' + COMMAND_EXCLUDE_FILE,
                         dest='excluded_regexps',
                         type=str,
                         action='append',
@@ -287,7 +289,7 @@ def parse():
                         help="exclude files and dirs matching the supplied patterns",
                         default=[])
 
-    parser.add_argument('-if', '--include-files',
+    parser.add_argument('-' + COMMAND_SHORT_INCLUDE_FILE, '--' + COMMAND_INCLUDE_FILE,
                         dest='included_regexps',
                         type=str,
                         action='append',
@@ -380,10 +382,12 @@ def _match_generic(single_file, filter, regexpr, only):
     all_match = None
     one_match = False
     for i in items:
-        found = re.search(regexpr, i)
+        needle = regexpr.strip()
+        found = re.search(needle, i)
+        verbose("re.search('" + needle + "', '" + i + "')")
         #print(single_file['path'] + " regexpr " + str(regexpr))
-        #print(single_file['path'] + " i       " + str(i))
-        #print(" found   " + str(type(found)))
+        verbose(single_file['path'] + " i       " + str(i))
+        verbose(" found   " + str(type(found)))
         #print(" found   " + str(found))
         #print(" found   " + str(found==True))
         if all_match == None:
@@ -395,6 +399,7 @@ def _match_generic(single_file, filter, regexpr, only):
     if all_match == None:
         all_match = False
         
+    #print("matcher " + single_file['path'] + " all: " + str(all_match) + "    one_match: " + str(one_match))
     if only == FilterModifier.ONLY:
         #print("return ONLY " + str(all_match))
         return all_match
@@ -408,6 +413,7 @@ def _files_map(included_files, excluded_files):
     files_map['excluded'] = excluded_files
     return files_map
 
+#def _all_files()
 
 def _handle_filter_action(action, files, args):
     tokens = action.split(" ")
@@ -416,35 +422,93 @@ def _handle_filter_action(action, files, args):
     tokens.pop(0)
     #for t in tokens:
     #    print("  expr  : " + t)
-    if command == INTERACTIVE_COMMAND_EXCLUDE_FILE:
+    if command == COMMAND_EXCLUDE_FILE:
         args['excluded_regexps'].append(tokens)
-    elif command == INTERACTIVE_COMMAND_INCLUDE_FILE:
+    elif command == COMMAND_INCLUDE_FILE:
         args['included_regexps'].append(tokens)
+
+    #DEBUG
+    for f in files['included']:
+        if "convert-utility" in f['path']:
+            print("-- filter: " + str(f['path']))
+
+    # TODO: filter on new reg_exp, not all
+    _filter(files, args['included_regexps'], args['excluded_regexps'])
+
+    #DEBUG
+    for f in files['included']:
+        #print("f: " + str(f))
+        #print("f: " + str(type(f)))
+        print("f: " + str(f['path']))
+        if f['path'].find("convert-utility") != -1:
+            print("-- filter: " + str(f['path']))
+    
+    print("inc: " + str(len(files['included'])))
+    print("exc: " + str(len(files['excluded'])))
     return 0
 
 def _parse_action(action, files, args):
     print("parse: \"" + action + "\"")
     if action.startswith("bye"):
-        return 1
-    elif action.startswith(INTERACTIVE_COMMAND_LIST_INCLUDED):
+        unknown_count = _unknown_licenses(files)
+        if unknown_count == 0:
+            return 1
+        else:
+            print("Can't leave with unknown licenses (" + str(unknown_count) + " of them now) ")
+    elif action.startswith(COMMAND_LIST_INCLUDED):
         print("Included files:")
-        filtered = _filter(files.copy(), args['included_regexps'], args['excluded_regexps'])
-        _output_filtered(filtered,
+        _output_filtered(files,
                          args['hide_files']==False,
                          args['show_directories'],
                          sys.stdout,
                          args['show_excluded_files'],
                          None)
-    elif action.startswith(INTERACTIVE_COMMAND_EXCLUDE_FILE) or \
-         action.startswith(INTERACTIVE_COMMAND_INCLUDE_FILE):
+    elif action.startswith(COMMAND_LIST_EXCLUDED):
+        print("Excluded files:")
+        _output_filtered(files,
+                         args['hide_files']==False,
+                         args['show_directories'],
+                         sys.stdout,
+                         True,
+                         None)
+    elif action.startswith(COMMAND_EXCLUDE_FILE) or \
+         action.startswith(COMMAND_INCLUDE_FILE):
         return _handle_filter_action(action, files, args)
     else:
         print("miss...")
         return 2
 
+def _files_to_list(files):
+    file_list=[]
+    for f in files['included']:
+        #print("f: " + str(f))
+        if _isfile(f):
+            file_list.append(f['path'])
+    return file_list
+
+def _unknown_licenses(files):
+    license_summary = _license_summary(files['included'])
+    if None in license_summary:
+        return license_summary[None]
+    else:
+        return 0
+
+
 def _interact(files, args):
+    words = INTERACTIVE_COMMANDS
+    words += _files_to_list(files)
+    completer = ManifestorCompleter(words)
+    readline.set_completer_delims(' ')
+    readline.set_completer(completer.complete)
+    #print("words: " + str(words))
+
     while True:
-        action = input("scancode-manfestor: ")
+        file_info = str(_count_files(files['included'])) + " files included"
+        license_info = str(_unknown_licenses(files)) + " unknown licenses"
+        print("inc: " + str(len(files['included'])))
+        print("exc: " + str(len(files['excluded'])))
+        print("[ " + file_info + ", " + license_info + " ]")
+        action = input("scancode-manfestor$ ")
         print("You typed: " + action)
         action_result = _parse_action(action.strip(), files, args)
         if action_result == 1:
@@ -452,60 +516,50 @@ def _interact(files, args):
 
 def _match_file(f, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
         if isinstance(regexpr, list):
-            print("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
+            verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
             match = True
             for re in regexpr:
                 match = match and _match_generic(f, filter, re, only)
                 verbose("   re:" + str(re) + "  ==> " + str(match))
             verbose("   ===================> " + str(match))
         else:
-            verbose(" match single : " + str(f['name']) + " " + str(f['license_expressions']) + " " + str(filter) + " " + str(regexpr))
+            print(" match single : " + str(f['name']) + " " + str(f['license_expressions']) + " " + str(filter) + " " + str(regexpr))
             match = _match_generic(f, filter, regexpr, only)
         return match
 
 def _filter_generic(files, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
     #print(" * filter: " + str(files))
-    filtered = []
-    ignored = files['excluded']
+    included = files['included']
+    excluded = files['excluded']
 
-    for f in files['included']:
+    #print("match file on expr :" + str(regexpr))
+    if include == FilterAction.INCLUDE:
+        file_list = 'excluded'
+        other_list = 'included'
+    else:
+        file_list = 'included'
+        other_list = 'excluded'
+
+    for f in files[file_list]:
+        file_path = f['path']
         match = _match_file(f, filter, regexpr)
-#        if isinstance(regexpr, list):
-#            verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
-#            match = True
-#            for re in regexpr:
-#                match = match and _match_generic(f, filter, re, only)
-#                verbose("   re:" + str(re) + "  ==> " + str(match))
-#            verbose("   ===================> " + str(match))
-#        else:
-#            match = _match_generic(f, filter, regexpr, only)
-            
-        #print("match " + str(f['path'] + " " + str(f['license_expressions']) + " " + str(regexpr) + ": " + str(match)))
-        # store in list if either:
-        #   match and include 
-        # or 
-        #   not match and exclude
+        print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)))
         if match == None:
             warn("Can't match: " + regexpr)
         elif match:
-            if include == FilterAction.INCLUDE:
-                verbose("filter include, keeping:  " + str(f['name']))
-                filtered.append(f)
-            else:
-                verbose("filter include, ignoring: " + str(f['name']))
-                if not f in ignored:
-                    ignored.append(f)
-                
-        elif not match:
-            if include==FilterAction.EXCLUDE:
-                verbose("filter exclude, keeping:  " + str(f['name']))
-                filtered.append(f)
-            else:
-                verbose("filter exclude, ignoring: " + str(f['name']))
-                if not f in ignored:
-                    ignored.append(f)
+            #print("-- match: " + str(filter) + " " + str(f['path']))
+            #print(" remove file:     " + str(f['path']) + " " + str(f in file_list) + " " + str(f in other_list))
+            #file_list.remove(f)
+            files[other_list].append(f)
+            files[file_list] = [x for x in files[file_list] if x['path'] != file_path ]
+            print(" ----- " + str(len(files[other_list])) + " == " + str(len(files[file_list])))
+            #print(" remove file:     " + str(f['path']) + " " + str(f in file_list) + " " + str(f in other_list))
+        else:
+            #print("no match: " + str(filter) + " " + str(f['path']))
+            pass
 
-    return _files_map(filtered, ignored)
+    
+    return _files_map(included, excluded)
 
 def _isfile(f):
     return f['type'] == "file"
@@ -583,13 +637,13 @@ def _filter(_files, included_regexps, excluded_regexps):
         verbose("Include file:    " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * include file:    " + regexp)
-            files = _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.INCLUDE)
+            _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.INCLUDE)
 
     for regexp_list in excluded_regexps:
         verbose("Exclude file:    " + str(regexp_list))
         for regexp in regexp_list:
             verbose(" * exclude file:    " + regexp)
-            files = _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
+            _filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
 
     if OBSOLETE == False:
         for regexp_list in show_licenses:
@@ -722,9 +776,37 @@ def _curate(files, file_curations, license_curations, missing_license_curation):
 def _count_files(files):
     cnt = 0 
     for f in files:
-        if f['type'] == "file":
+        if _isfile(f):
             cnt += 1
     return cnt
+
+def _license_summary(files):
+    licenses={}
+    for f in files:
+        #print(" path " + str(f['path']))
+        verbose(" lice " + str(f['license_expressions']))
+        if _isfile(f):
+            lic = None
+            lic_list = list(_extract_license(f))
+            verbose(" list " + str(lic_list))
+            lic_list.sort()
+            for l in lic_list:
+                verbose(" l    " + str(l))
+                if lic == None:
+                    lic = l
+                else:
+                    lic += " and " + l
+
+            verbose(" lic  " + str(lic))
+            if lic in licenses:
+                licenses[lic] += 1
+            else:
+                licenses[lic] = 1
+            verbose (" === " + str(lic) + " ==> " + str(licenses[lic]))
+
+            #licenses.add(_extract_license(f))
+    verbose(" ===> " + str(licenses))
+    return licenses
 
 def _validate(files, report, outbound_license):
     errors = []
@@ -1083,16 +1165,18 @@ def main():
     # Setup files map
     files = _setup_files(scancode_report['files'])
 
-    if args['mode'] == MODE_INTERACTIVE:
-        #print("excluded: " + str(args['excluded_regexps']))
-        _interact(files, args)
-        #print("excluded: " + str(args['excluded_regexps']))
     
     #
     # filter files
     #
-    filtered = _filter(files, args['included_regexps'], args['excluded_regexps'])
+    _filter(files, args['included_regexps'], args['excluded_regexps'])
+    filtered = files
         
+    if args['mode'] == MODE_INTERACTIVE:
+        #print("excluded: " + str(args['excluded_regexps']))
+        _interact(filtered, args)
+        #print("excluded: " + str(args['excluded_regexps']))
+
     if args['mode'] == MODE_FILTER:
         #
         # if filter mode - this is the final step in the pipe
