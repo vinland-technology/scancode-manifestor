@@ -11,6 +11,7 @@
 ###################################################################
 
 import readline
+import subprocess
 import sys
 
 import manifestor_utils
@@ -128,6 +129,10 @@ class ManifestorInteractor:
         elif action.startswith(self.commands.COMMAND_SHOW_LICENSES) or \
              action.startswith(self.commands.COMMAND_SHORT_SHOW_LICENSES):
             return self._add_show(args, self._action_arguments(action))
+        elif action.startswith(self.commands.COMMAND_OPEN_FILE):
+            print("OPEN FILE...." + str(action))
+            for f in self._action_arguments(action):
+                res = subprocess.run(["less " + f], shell=True)
         elif action.startswith(self.commands.COMMAND_SHOW_COMMANDS):
             print("Commands:")
             for command in self.commands.INTERACTIVE_COMMANDS:
