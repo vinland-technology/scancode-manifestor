@@ -180,17 +180,17 @@ class ManifestUtils:
         return count
     
     def _match_file(self, f, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
-            if isinstance(regexpr, list):
-                self.logger.self.logger.verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
-                match = True
-                for re in regexpr:
-                    match = match and self._match_generic(f, filter, re, only)
-                    self.logger.verbose("   re:" + str(re) + "  ==> " + str(match))
-                self.logger.verbose("   ===================> " + str(match))
-            else:
-                #print(" match single : " + str(f['name']) + " " + str(f['license_expressions']) + " " + str(filter) + " " + str(regexpr))
-                match = self._match_generic(f, filter, regexpr, only)
-            return match
+        if isinstance(regexpr, list):
+            self.logger.self.logger.verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
+            match = True
+            for re in regexpr:
+                match = match and self._match_generic(f, filter, re, only)
+                self.logger.verbose("   re:" + str(re) + "  ==> " + str(match))
+            self.logger.verbose("   ===================> " + str(match))
+        else:
+            #print(" match single : " + str(f['name']) + " " + str(f['license_expressions']) + " " + str(filter) + " " + str(regexpr))
+            match = self._match_generic(f, filter, regexpr, only)
+        return match
 
     def _keep_file(self, match, filter):
         if match:
@@ -206,7 +206,7 @@ class ManifestUtils:
 
         for f in files['included']:
             file_path = f['path']
-            match = self._match_file(f, filter, regexpr)
+            match = self._match_file(f, filter, regexpr, include, only)
             #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)))
             if match == None:
                 warn("Can't match: " + regexpr)
@@ -268,28 +268,6 @@ class ManifestUtils:
                 self.logger.verbose(" * ignore:  " + file_name)
         return licenses
 
-    def _obsoleted_summarize(self, _files):
-        summary = {}
-        licenses   = set()
-        copyrights = set()
-        files = _files['included']
-
-        for f in files:
-            licenses = self._extract_license(f)
-            #for l in f['license_expressions']:
-                #licenses.add(l)
-            for c in f['copyrights']:
-                copyrights.add(c['value'])
-
-        license_list = list(licenses)
-        license_list.sort()
-
-        copyrights_list = list(copyrights)
-        copyrights_list.sort()
-
-        summary['license_key'] = license_list
-        summary['copyright'] = copyrights_list
-        return summary
 
     def _filter(self, _files, included_regexps, excluded_regexps):
         files = _files
