@@ -240,19 +240,6 @@ class ManifestUtils:
             licenses.add(lic['spdx_license_key'])
         return licenses
 
-    def _obsolete_extract_license(self, f):
-        # use set - to automatically remove duplicates
-        licenses = set()
-        #print("file: " + str(f['licenses']))
-        for lic in f['licenses']:
-            # Try to find SPDX license
-            # if not possible to find SPDX, choose scancode key
-            spdx = lic['spdx_license_key']
-            if spdx:
-                licenses.add(spdx)
-            else:
-                licenses.add(lic['key'])
-        return licenses
 
     def _dir_licenses(self, _files, dir, key):
         licenses = set()
