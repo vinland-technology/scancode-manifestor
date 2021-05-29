@@ -1,5 +1,5 @@
 
-TEST_FILES=filter.py
+TEST_FILES=filter.py match.py misc.py
 
 all: test
 
