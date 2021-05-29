@@ -14,7 +14,7 @@ import readline
 import subprocess
 import sys
 
-import manifestor_utils
+import scancode_manifestor.manifestor_utils
 
 class ManifestorCompleter:
     def __init__(self,manifestor):

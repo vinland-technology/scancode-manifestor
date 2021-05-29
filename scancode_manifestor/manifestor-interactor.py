@@ -14,7 +14,7 @@ import readline
 readline.parse_and_bind('tab: complete')
 
 class ManifestorCompleter:
-    def __init__(self,manifestor):
+    def __init__(self, manifestor):
         self.manifestor = manifestor
 
     def complete(self,text,state):

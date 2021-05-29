@@ -21,14 +21,14 @@ import re
 import sys
 import subprocess
 
-from manifestor_commands import ManifestorCommands
-from manifestor_interactor import ManifestorInteractor
-import manifestor_utils
-from manifestor_utils import ManifestLogger
-from manifestor_utils import ManifestUtils
-from manifestor_utils import FilterAction
-from manifestor_utils import FilterAttribute
-from manifestor_utils import FilterModifier
+from scancode_manifestor.manifestor_commands import ManifestorCommands
+from scancode_manifestor.manifestor_interactor import ManifestorInteractor
+import scancode_manifestor.manifestor_utils
+from scancode_manifestor.manifestor_utils import ManifestLogger
+from scancode_manifestor.manifestor_utils import ManifestUtils
+from scancode_manifestor.manifestor_utils import FilterAction
+from scancode_manifestor.manifestor_utils import FilterAttribute
+from scancode_manifestor.manifestor_utils import FilterModifier
 
 
 
@@ -251,7 +251,7 @@ def parse(commands):
                         help="include files and dirs matching the supplied patterns",
                         default=[])
 
-    parser.add_argument('-c' + commands.COMMAND_SHORT_CURATE_FILE, '--' + commands.COMMAND_CURATE_FILE,
+    parser.add_argument('-' + commands.COMMAND_SHORT_CURATE_FILE, '--' + commands.COMMAND_CURATE_FILE,
                         dest='file_curations',
                         type=str,
                         action='append',
@@ -259,7 +259,7 @@ def parse(commands):
                         help="curations ....",
                         default=[])
 
-    parser.add_argument('-c' + commands.COMMAND_SHORT_CURATE_LICENSE, '--' + commands.COMMAND_CURATE_LICENSE,
+    parser.add_argument('-' + commands.COMMAND_SHORT_CURATE_LICENSE, '--' + commands.COMMAND_CURATE_LICENSE,
                         dest='license_curations',
                         type=str,
                         action='append',
@@ -267,7 +267,7 @@ def parse(commands):
                         help="curations ....",
                         default=[])
 
-    parser.add_argument('-c' + commands.COMMAND_SHORT_CURATE_MISSING_LICENSE, '--' + commands.COMMAND_CURATE_MISSING_LICENSE,
+    parser.add_argument('-' + commands.COMMAND_SHORT_CURATE_MISSING_LICENSE, '--' + commands.COMMAND_CURATE_MISSING_LICENSE,
                         dest='missing_license_curation',
                         type=str,
                         help="missing license curation",
@@ -299,34 +299,34 @@ class ScancodeManifestor:
 
     def _read_merge_args(self, args):
         new_args = {}
-        logger.verbose("read config: " + str(args['config']))
+        self.logger.verbose("read config: " + str(args['config']))
         with open(args['config']) as fp:
             config_args = json.load(fp)
-        logger.verbose("read config: " + str(json.dumps(config_args)))
-        logger.verbose("")
-        logger.verbose("args       : " + str(json.dumps(args)))
-        logger.logger.verbose("")
+        self.logger.verbose("read config: " + str(json.dumps(config_args)))
+        self.logger.verbose("")
+        self.logger.verbose("args       : " + str(json.dumps(args)))
+        self.logger.verbose("")
         for k,v in config_args.items():
-            logger.verbose(" * " + str(k))
-            logger.verbose("   * " + str(v))
-            logger.verbose("   * " + str(args[k]))
+            self.logger.verbose(" * " + str(k))
+            self.logger.verbose("   * " + str(v))
+            self.logger.verbose("   * " + str(args[k]))
             v_type = type(config_args[k])
-            logger.verbose("    * " + str(v_type))
+            self.logger.verbose("    * " + str(v_type))
             new_args[k] = config_args[k]
             if args[k] == None or args[k] == [] :
                 pass
             else:
                 if isinstance(config_args[k],list):
-                    logger.verbose("       merge ")
+                    self.logger.verbose("       merge ")
                     new_args[k] = config_args[k] + args[k] 
                 else:
                     new_args[k] = args[k] 
-                    logger.verbose("       replace")
+                    self.logger.verbose("       replace")
 
-        logger.verbose(" -- merged arguments ---")
+        self.logger.verbose(" -- merged arguments ---")
         new_args['mode'] = args['mode']
         for k,v in new_args.items():
-            logger.verbose(" * " + str(k) + ": " + str(new_args[k]))
+            self.logger.verbose(" * " + str(k) + ": " + str(new_args[k]))
         return new_args
 
     def _using_hide_args(self, args):
@@ -440,12 +440,13 @@ def main():
     #
     # add curations
     #
-    curated = utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
+    curations = utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
+    curated = transformed
     
     #
     # validate
     #
-    report = utils._report(args, scancode_report, curated)
+    report = utils._report(args, scancode_report, transformed, curations)
     validation = utils._validate(curated, report, args['outbound_license'])
     if validation['errors'] != []:
         for err in validation['errors']:
@@ -456,17 +457,25 @@ def main():
     #
     if args['mode'] == MODE_VALIDATE:
         print("Curated and validated files:")
-        _output_files(curated)
-        print("License and copyright:")
-        print("license:   " + str(report['conclusion']['license_expression']))
-        print("copyright: " + str(report['conclusion']['copyright']))
+        utils._output_files(curated)
+        print("-----")
+        print("Excluded files: ")
+        print("  " + str(len(curated['excluded'])))
+        print("Included files:")
+        print("  " + str(len(curated['included'])))
+        print("License:")
+        print("  " + str(report['conclusion']['license_expression']))
+        print("Copyright:")
+        for c in report['conclusion']['copyright']:
+            print("  " + str(c))
         exit(0)
 
-    if args['output'] != None:
-        with open(args['output'], "w") as manifest_file:
-            json.dump(report, manifest_file) 
-    else:
-        print(json.dumps(report, indent=2))
+    if args['mode'] == MODE_CREATE:
+        if args['output'] != None:
+            with open(args['output'], "w") as manifest_file:
+                json.dump(report, manifest_file) 
+        else:
+            print(json.dumps(report, indent=2))
         
 
     

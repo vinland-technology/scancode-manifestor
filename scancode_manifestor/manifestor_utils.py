@@ -192,36 +192,31 @@ class ManifestUtils:
                 match = self._match_generic(f, filter, regexpr, only)
             return match
 
+    def _keep_file(self, match, filter):
+        if match:
+            return filter == FilterAction.INCLUDE
+        else:
+            return filter == FilterAction.EXCLUDE
+        
     def _filter_generic(self, files, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
         #print(" * filter: " + str(files))
         included = files['included']
         excluded = files['excluded']
 
-        #print("match file on expr :" + str(regexpr))
-        if include == FilterAction.INCLUDE:
-            file_list = 'excluded'
-            other_list = 'included'
-        else:
-            file_list = 'included'
-            other_list = 'excluded'
 
-        for f in files[file_list]:
+        for f in files['included']:
             file_path = f['path']
             match = self._match_file(f, filter, regexpr)
             #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)))
             if match == None:
                 warn("Can't match: " + regexpr)
-            elif match:
-                #print("-- match: " + str(filter) + " " + str(f['path']))
-                #print(" remove file:     " + str(f['path']) + " " + str(f in file_list) + " " + str(f in other_list))
-                #file_list.remove(f)
-                files[other_list].append(f)
-                files[file_list] = [x for x in files[file_list] if x['path'] != file_path ]
-                #verbose(" ----- " + str(len(files[other_list])) + " == " + str(len(files[file_list])))
-                #print(" remove file:     " + str(f['path']) + " " + str(f in file_list) + " " + str(f in other_list))
             else:
-                #print("no match: " + str(filter) + " " + str(f['path']))
-                pass
+                keep = self._keep_file(match, include)
+                if not keep:
+                    #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)) + " " + str(f) )
+                    excluded.append(f)
+                    files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
+                    #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)))
 
 
         return self._files_map(included, excluded)
@@ -420,8 +415,8 @@ class ManifestUtils:
             new_list.append(f)
             files['included'] = new_list
 
-        print("Curations made (" +  regexpr +"): " + str(curations))
-        return files
+        #print("Curations made (" +  regexpr +"): " + str(curations))
+        return curations
 
     def _curate(self, files, file_curations, license_curations, missing_license_curation):
         curated = files
@@ -542,7 +537,7 @@ class ManifestUtils:
 
         return { 'dirs': dirs, 'files': files}
 
-    def _report(self, args, scancode_report, _files):
+    def _report(self, args, scancode_report, _files, curations):
         copyrights = set()
         licenses = set()
         spdx = set()
@@ -622,6 +617,7 @@ class ManifestUtils:
         # Meta information
         #
         report['meta']={}
+        report['meta']['curations'] = curations
         report['meta']['arguments'] = args #.__dict__
         report['meta']['report_date'] = str(datetime.datetime.now())
         report['meta']['scancode_report_file'] = args['input_file']
@@ -644,7 +640,7 @@ class ManifestUtils:
                     print(str(c), end="" )
                 print("]")
             else:
-                print("f: " + str(f['name']))
+                #print("f: " + str(f['name']))
                 print(str(f['name']) + " [" + f['license_key'] + "]")
 
 
@@ -692,6 +688,14 @@ class ManifestUtils:
             self.logger.verbose(" * Hide licenses:    " + str(regexp_list))
             for regexp in regexp_list:
                 match = self._match_file(f, FilterAttribute.LICENSE, regexp)
+                if match:
+                    show_file = False
+                self.logger.verbose("    * hide license: " + regexp + " ==> " + str(match))
+
+        for regexp_list in hide_only_licenses:
+            self.logger.verbose(" * Hide only licenses:    " + str(regexp_list))
+            for regexp in regexp_list:
+                match = self._match_file(f, FilterAttribute.LICENSE, regexp, FilterAction.INCLUDE, FilterModifier.ONLY)
                 if match:
                     show_file = False
                 self.logger.verbose("    * hide license: " + regexp + " ==> " + str(match))
