@@ -42,5 +42,16 @@ class TestMiscIs(unittest.TestCase):
         right_list = ['bsd-new', 'gpl-2.0-or-later', 'gpl-3.0-only', 'gpl-3.0-or-later', 'mit']
         assert right_list == lic_list
 
+    def test_keep_file(self):
+        f = sample_data.files()
+
+        assert self.utils._keep_file(f, True, FilterAction.INCLUDE)
+        
+        assert not self.utils._keep_file(f, True, FilterAction.EXCLUDE)
+        
+        assert not self.utils._keep_file(f, False, FilterAction.INCLUDE)
+        
+        assert self.utils._keep_file(f, False, FilterAction.EXCLUDE)
+        
 if __name__ == '__main__':
     unittest.main()
