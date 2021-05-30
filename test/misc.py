@@ -43,15 +43,43 @@ class TestMiscIs(unittest.TestCase):
         assert right_list == lic_list
 
     def test_keep_file(self):
-        f = sample_data.files()
+        f = sample_data.file()
 
-        assert self.utils._keep_file(f, True, FilterAction.INCLUDE)
+        assert self.utils._keep_file(True, FilterAction.INCLUDE)
         
-        assert not self.utils._keep_file(f, True, FilterAction.EXCLUDE)
+        assert not self.utils._keep_file(True, FilterAction.EXCLUDE)
         
-        assert not self.utils._keep_file(f, False, FilterAction.INCLUDE)
+        assert not self.utils._keep_file(False, FilterAction.INCLUDE)
         
-        assert self.utils._keep_file(f, False, FilterAction.EXCLUDE)
+        assert self.utils._keep_file(False, FilterAction.EXCLUDE)
+
+    def test_extract_license(self):
+        f = sample_data.file()
+        fl = self.utils._extract_license(f)
+        expected_l = {'gpl-3.0-or-later', 'gpl-2.0-or-later'}
+        assert expected_l == fl
+
+    def test_curate_file_license(self):
+        files = sample_data.transformed_files()
+
+        # curate file "bonkey.txt" to be mit
+        self.utils._curate_file_license(files, "bonkey.txt", "mit")
+
+        # find the file bonkey.txt
+        the_file = None
+        for f in files['included']:
+            if f['name'] == "bonkey.txt":
+                the_file = f
+                break
+
+        # compare bonkey's license with expected
+        expected_l = 'mit'
+        actual_l = the_file['license_key']
+        assert expected_l == actual_l
+        
+        #expected_l = {'gpl-3.0-or-later', 'gpl-2.0-or-later'}
+        #assert expected_l == fl
+
         
 if __name__ == '__main__':
     unittest.main()
