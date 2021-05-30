@@ -12,13 +12,77 @@ from scancode_manifestor.manifestor_utils import ManifestLogger
 from scancode_manifestor.manifestor_utils import ManifestUtils
 
 import sample_data
-
+ 
 class TestMatchGeneric(unittest.TestCase):
 
     def setUp(self):
         self.logger = ManifestLogger(False)
         self.utils = ManifestUtils(self.logger)
         
+    def test_match_path_bad_indata(self):
+        f = sample_data.file()
+
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(None,
+                                      FilterAttribute.PATH,
+                                      "bonkey.txt",
+                                      FilterAction.INCLUDE,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      None,
+                                      "bonkey.txt",
+                                      FilterAction.INCLUDE,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      "incorrect",
+                                      "bonkey.txt",
+                                      FilterAction.INCLUDE,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      FilterAttribute.PATH,
+                                      None,
+                                      FilterAction.INCLUDE,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      FilterAttribute.PATH,
+                                      set(),
+                                      FilterAction.INCLUDE,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      FilterAttribute.PATH,
+                                      "bonkey.txt",
+                                      None,
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                      FilterAttribute.PATH,
+                                      "bonkey.txt",
+                                      "incorrect",
+                                      FilterModifier.ANY))
+    
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                                        FilterAttribute.PATH,
+                                                        "bonkey.txt",
+                                                        FilterAction.INCLUDE,
+                                                        None))
+        self.assertRaises(Exception,
+                          lambda:self.utils._match_file(f,
+                                                        FilterAttribute.PATH,
+                                                        "bonkey.txt",
+                                                        FilterAction.INCLUDE,
+                                                        "incorrect"))
     
     def test_match_path(self):
         f = sample_data.file()
@@ -58,9 +122,6 @@ class TestMatchGeneric(unittest.TestCase):
                                           FilterAction.INCLUDE,
                                           FilterModifier.ANY)
 
-
-        
-        
 
 
 if __name__ == '__main__':
