@@ -180,6 +180,17 @@ class ManifestUtils:
         return count
     
     def _match_file(self, f, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
+        if f == None:
+            raise ValueError("No files argument supplied")
+        if filter == None or type(filter) != FilterAttribute:
+            raise ValueError("No filter, or incorrect type, argument supplied")
+        if include == None or type(include) != FilterAction:
+            raise ValueError("No filter action, or incorrect type, argument supplied")
+        if regexpr == None or type(regexpr) != str:
+            raise ValueError("No filter modifier, or incorrect type, argument supplied")
+        if only == None or type(only) != FilterModifier:
+            raise ValueError("No filter modifier, or incorrect type, argument supplied")
+
         if isinstance(regexpr, list):
             self.logger.self.logger.verbose("Woops, many items... filter: " + str(f['path']) + str(f['license_expressions']) )
             match = True
