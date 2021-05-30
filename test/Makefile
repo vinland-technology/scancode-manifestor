@@ -5,6 +5,6 @@ all: test
 
 test:
 	@for file in $(TEST_FILES)  ; do \
-		echo $$file && PYTHONPATH=.. ./$$file; \
+		echo "---=== $$file ===---" && echo && PYTHONPATH=.. ./$$file && echo ; \
 	done
 
