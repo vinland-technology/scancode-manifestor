@@ -199,10 +199,22 @@ class ManifestUtils:
             return filter == FilterAction.EXCLUDE
         
     def _filter_generic(self, files, filter, regexpr, include=FilterAction.INCLUDE, only=FilterModifier.ANY):
-        #print(" * filter: " + str(files))
-        included = files['included']
-        excluded = files['excluded']
+        if files == None:
+            raise ValueError("No files argument supplied")
+        if filter == None or type(filter) != FilterAttribute:
+            raise ValueError("No filter, or incorrect type, argument supplied")
+        if include == None or type(include) != FilterAction:
+            raise ValueError("No filter action, or incorrect type, argument supplied")
+        if only == None or type(only) != FilterModifier:
+            raise ValueError("No filter modifier, or incorrect type, argument supplied")
 
+        try:
+            #print(" * filter: " + str(files))
+            included = files['included']
+            excluded = files['excluded']
+        except:
+            raise ValueError("Incorrect list of files")
+            
 
         for f in files['included']:
             file_path = f['path']
@@ -339,16 +351,13 @@ class ManifestUtils:
         return self._files_map(self._transform_files_helper(files['included']), self._transform_files_helper(files['excluded']))
 
     def _curate_file_license(self, files, regexpr, lic):
-        new_list = []
-        included_files = files['included']
-        for f in included_files:
+        for f in files['included']:
             #print("\nf: " + str(f))
             if re.search(regexpr, f['name']):
                 #self.logger.verbose(f['name'] + " " + str(f['license']) + " => " + lic)
                 self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
                 f['license_key'] = lic
-            new_list.append(f)
-        return self._files_map(new_list, files['excluded'])
+        return files
 
     def _curate_license(self, files, regexpr, lic):
         curations = 0 
@@ -377,8 +386,8 @@ class ManifestUtils:
                 self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
                 f['license_key'] = lic
                 curations += 1
-            new_list.append(f)
-            files['included'] = new_list
+            #new_list.append(f)
+            #files['included'] = new_list
 
         #print("Curations made (" +  regexpr +"): " + str(curations))
         return curations
