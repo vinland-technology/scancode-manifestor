@@ -252,8 +252,9 @@ class ManifestUtils:
 
     def _extract_license(self, f):
         licenses = set()
-        for lic in f['licenses']:
-            licenses.add(lic['key'])
+        for lic in f['license_expressions']:
+            licenses.add(lic)
+            #licenses.add(lic['key'])
         return licenses
 
     def _extract_license_spdx(self, f):
@@ -469,7 +470,11 @@ class ManifestUtils:
                     if lic == None:
                         lic = l
                     else:
-                        lic += " and " + l
+                        if "or" in lic.lower() or "|" in lic.lower():
+                            lic += " and ( " + l + " )"
+                        else:
+                            lic += " and " + l
+                            
 
                 self.logger.verbose(" lic  " + str(lic))
                 if lic in licenses:
