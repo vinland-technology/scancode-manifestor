@@ -5,11 +5,9 @@ def sample_file(name, path, licenses):
     file['name'] = name
     file['type'] = "file"
     file['path'] = path + "/" + name
-    file['licenses'] = []
+    file['license_expressions'] = []
     for l in licenses:
-        lic = {}
-        lic['key'] = l
-        file['licenses'].append(lic)
+        file['license_expressions'].append(l)
 
     return file
 
