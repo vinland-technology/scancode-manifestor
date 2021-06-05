@@ -463,11 +463,13 @@ def main():
         print("  " + str(len(curated['excluded'])))
         print("Included files:")
         print("  " + str(len(curated['included'])))
-        print("License:")
-        print("  " + str(report['conclusion']['license_expression']))
         print("Copyright:")
         for c in report['conclusion']['copyright']:
             print("  " + str(c))
+        print("License (original):")
+        print("  " + str(report['conclusion']['license_expression_original']))
+        print("License (simplified):")
+        print("  " + str(report['conclusion']['license_expression']))
         exit(0)
 
     if args['mode'] == MODE_CREATE:
