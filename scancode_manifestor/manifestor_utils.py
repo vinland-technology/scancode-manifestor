@@ -330,7 +330,11 @@ class ManifestUtils:
                     lic_expr = ""
                 else:
                     lic_expr += " and "
-                lic_expr += lic
+
+                if "or" in lic.lower() or "|" in lic:
+                    lic_expr += " ( " + lic + " ) "
+                else:
+                    lic_expr += lic
 
             spdx_expr = None
             for lic in list(self._extract_license_spdx(f)):
@@ -602,6 +606,8 @@ class ManifestUtils:
         report['conclusion'] = {}
         report['conclusion']['copyright'] = c_list
         report['conclusion']['license_expression'] = json_compat_lic
+        report['conclusion']['license_expression_original'] = lic_expr
+
 
         #
         # Meta information
