@@ -12,6 +12,7 @@
 
 from enum import Enum
 import datetime
+import json
 import re
 import sys
 from license_expression import Licensing
@@ -237,7 +238,13 @@ class ManifestUtils:
                 keep = self._keep_file(match, include)
                 if not keep:
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)) + " " + str(f) )
+                    
+                    self._add_scancode_manifestor_data(f, 'filter_type', filter)
+                    self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
                     excluded.append(f)
+
+                    #print("woops: " + str(f['name']))
+                    #print("woops: " + str(f['scancode_manifestor']))
                     files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)))
 
@@ -313,16 +320,17 @@ class ManifestUtils:
 
         return files
 
+    def _add_scancode_manifestor_data(self, f, key, data):
+        if 'scancode_manifestor' not in f:
+            f['scancode_manifestor'] = {}
+        f['scancode_manifestor'][key] = data
+    
     def _transform_files_helper(self, files):
-        file_list = []
+        #file_list = []
         for f in files:
             if not self._isfile(f):
                 continue
-            file_map = {}
-            file_map['name'] = f['path']
-            file_map['sha1'] = f['sha1']
-            file_map['sha256'] = f['sha256']
-            file_map['md5'] = f['md5']
+            
 
             lic_expr = None
             for lic in list(self._extract_license(f)):
@@ -346,15 +354,15 @@ class ManifestUtils:
 
 
             #print("lic: " + str(lic_expr))
-            file_map['license_key'] = lic_expr
-            file_map['license_spdx'] = spdx_expr
+            self._add_scancode_manifestor_data(f, 'license_key', lic_expr)
+            self._add_scancode_manifestor_data(f, 'license_spdx', spdx_expr)
 
             copyrights = set()
             for c in f['copyrights']:
                 copyrights.add(c['value'])
-            file_map['copyright'] = list(copyrights)
-            file_list.append(file_map)
-        return file_list
+            self._add_scancode_manifestor_data(f, 'copyright', list(copyrights))
+            #file_list.append(file_map)
+        #return file_list
 
     def _hiders(self, args):
         hiders = {}
@@ -364,15 +372,27 @@ class ManifestUtils:
         return hiders
     
     def _transform_files(self, files):
-        return self._files_map(self._transform_files_helper(files['included']), self._transform_files_helper(files['excluded']))
+        #return self._files_map(self._transform_files_helper(files['included']), self._transform_files_helper(files['excluded']))
+        self._transform_files_helper(files['included'])
+        self._transform_files_helper(files['excluded'])
+        #print("sizes=" + str(len(files['included'])) + " " + str(len(files['excluded'])))
+        for f in files['included']:
+            if f['type'] != "file":
+                if f not in files['excluded']:
+                    files['excluded'].append(f)
+                    #print("Adding " + str(f['path']) + " " + str(f['type']))
+        files['included'] = [x for x in files['included'].copy() if x['type'] == "file" ]
+        #print("sizes=" + str(len(files['included'])) + " " + str(len(files['excluded'])))
+        
 
     def _curate_file_license(self, files, regexpr, lic):
         for f in files['included']:
-            #print("\nf: " + str(f))
-            if re.search(regexpr, f['name']):
+            if re.search(regexpr, f['path']):
                 #self.logger.verbose(f['name'] + " " + str(f['license']) + " => " + lic)
-                self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
-                f['license_key'] = lic
+                self.logger.verbose(f['name'] + " => " + lic)
+                self._add_scancode_manifestor_data(f, 'curation_type', 'file')
+                self._add_scancode_manifestor_data(f, 'curation_expr', regexpr)
+                self._add_scancode_manifestor_data(f, 'curated_license', lic)
         return files
 
     def _curate_license(self, files, regexpr, lic):
@@ -387,12 +407,16 @@ class ManifestUtils:
                 #print("HERE I AM " + str(f))
                 if 'license_key' not in f:
                     self.logger.verbose(f['name'] + " missing license_key => " + lic)
-                    f['license_key'] = lic
+                    self._add_scancode_manifestor_data(f, 'curation_type', 'license')
+                    self._add_scancode_manifestor_data(f, 'curated_license', lic)
+#                    f['license_key'] = lic
                     curations += 1
 
                 elif f['license_key'] == None or f['license_key'] == []:
                     self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
-                    f['license_key'] = lic
+                    self._add_scancode_manifestor_data(f, 'curation_type', 'license')
+                    self._add_scancode_manifestor_data(f, 'curated_license', lic)
+#                    f['license_key'] = lic
                     curations += 1
             elif 'license_key' not in f:
                 pass
@@ -400,7 +424,9 @@ class ManifestUtils:
                 pass
             elif re.search(regexpr, f['license_key']):
                 self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
-                f['license_key'] = lic
+                self._add_scancode_manifestor_data(f, 'curation_type', 'license')
+                self._add_scancode_manifestor_data(f, 'curated_license', lic)
+                #f['license_key'] = lic
                 curations += 1
             #new_list.append(f)
             #files['included'] = new_list
@@ -411,7 +437,7 @@ class ManifestUtils:
     def _curate(self, files, file_curations, license_curations, missing_license_curation):
         curated = files
         self.logger.verbose("curations: " + str(file_curations))
-
+                
         for curation in file_curations:
             self.logger.verbose("  * " + str(curation))
             length = len(curation)
@@ -500,14 +526,19 @@ class ManifestUtils:
         report_file_count = report['files']['included_files_count'] + report['files']['excluded_files_count']
         if orig_file_count != report_file_count:
             errors.append("Files in report (" + str(report_file_count) + ") not the same as scancode report (" + str(orig_file_count) + ")")
+            
 
+            
         for f in included_files:
+            #print("----> " + json.dumps(f, indent=6))
+            #print("----> " + str(f['type']))
+            manifest_map = f['scancode_manifestor']
             self.logger.verbose("validating " + str(f['name']))
             if f['name'] == None or f['name'] == "":
                 errors.append("File name can't be None or \"\"")
-            if f['license_key'] == None or f['license_key'] == []:
+            if manifest_map['license_key'] == None or manifest_map['license_key'] == []:
                 errors.append("Error for " + f['name'] + ": license can't be None or [].")
-            if f['copyright'] == None or f['copyright'] == []:
+            if manifest_map['copyright'] == None or manifest_map['copyright'] == []:
                 warnings.append("Warning for " + f['name'] + ": copyright can't be None or [].")
 
 
@@ -538,11 +569,15 @@ class ManifestUtils:
         files = _files['included']
 
         for f in files:
-            self.logger.verbose("collecting info " + str(f['name']) + " " + str(f['license_key']))
-            for c in f['copyright']:
+            if self._isdir(f):
+                continue
+            manifest_map = f['scancode_manifestor']
+            #print("collecting info " + str(f))
+            self.logger.verbose("collecting info " + str(f['name']) + " " + str(manifest_map['license_key']))
+            for c in manifest_map['copyright']:
                 copyrights.add(c)
-            licenses.add(f['license_key'])
-            spdx.add(f['license_spdx'])
+            licenses.add(manifest_map['license_key'])
+            spdx.add(manifest_map['license_spdx'])
 
         lic_expr = None
         #print("licenses: " + str(licenses))
@@ -583,8 +618,8 @@ class ManifestUtils:
         report['files'] = {}
         report['files']['included'] = _files['included']
         report['files']['excluded'] = _files['excluded']
-        report['files']['included_files_count'] = len(_files['included'])
-        report['files']['excluded_files_count'] = len(_files['excluded'])
+        report['files']['included_files_count'] = self._count_files(_files['included'])
+        report['files']['excluded_files_count'] = self._count_files(_files['excluded'])
         report['files']['original_files_count'] = self._scancode_report_files_count(scancode_report)
 
         #
@@ -624,20 +659,36 @@ class ManifestUtils:
     def _output_args(self, args):
         print(json.dumps(report))
 
+    def _curated_license(self, f):
+        manifestor_map = f['scancode_manifestor']
+        if 'curated_license' in manifestor_map:
+            return manifestor_map['curated_license']
+        else:
+            return ""
+
+    def _curation_type(self, f):
+        manifestor_map = f['scancode_manifestor']
+        if 'curation_type' in manifestor_map:
+            return manifestor_map['curation_type']
+        else:
+            return ""
 
     def _output_files(self, files):
         # TODO: also output command line arg
         # TODO: output excluded files as well
         with_copyright = False
         for f in files['included']:
+            manifestor_map = f['scancode_manifestor']
+            license_info = "[ " + manifestor_map['license_key'] + " : " + self._curated_license(f)  + " : " + self._curation_type(f) + " ]"
             if with_copyright:
-                print(str(f['name']) + " [" + f['license_key'] + "] [", end="" )
+                print(str(f['name']) + " [" + license_info + "] [", end="" )
                 for c in f['copyright']:
                     print(str(c), end="" )
                 print("]")
             else:
                 #print("f: " + str(f['name']))
-                print(str(f['name']) + " [" + f['license_key'] + "]")
+                #print("f: " + str(f['type']))
+                print("  " + str(f['name']) + " " + license_info)
 
 
     def _output_verbose_file(self, files, verbose_file):
