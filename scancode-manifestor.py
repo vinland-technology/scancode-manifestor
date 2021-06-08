@@ -30,6 +30,10 @@ from scancode_manifestor.manifestor_utils import FilterAction
 from scancode_manifestor.manifestor_utils import FilterAttribute
 from scancode_manifestor.manifestor_utils import FilterModifier
 
+from scancode_manifestor.format_markdown import MarkdownFormatter
+from scancode_manifestor.format_text import TextFormatter
+from scancode_manifestor.format_json import JSONFormatter
+
 
 
 #
@@ -82,7 +86,10 @@ MODE_INTERACTIVE = "interactive"
 ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_CREATE, MODE_CONFIG, MODE_INTERACTIVE ]
 DEFAULT_MODE=MODE_FILTER
 
-
+OUTPUT_FORMAT_TEXT="text"
+OUTPUT_FORMAT_JSON="json"
+OUTPUT_FORMAT_MARKDOWN="markdown"
+DEFAULT_OUTPUT_FORMAT=OUTPUT_FORMAT_TEXT
 
 def parse(commands):
     
@@ -112,6 +119,11 @@ def parse(commands):
                         action='store_true',
                         help='output verbose information to stderr',
                         default=False)
+    
+    parser.add_argument('-of', '--output-format',
+                        dest='format',
+                        help='format of output',
+                        default=DEFAULT_OUTPUT_FORMAT)
     
     parser.add_argument('-fc', '--force-config',
                         action='store_true',
@@ -431,7 +443,8 @@ def main():
     #
     # transform to intermediate format
     #
-    transformed = utils._transform_files(filtered)
+    utils._transform_files(filtered)
+    transformed = filtered
     if args['verbose']:
         logger.verbose("---- transformed files -----")
         utils._output_filtered(transformed, sys.stderr, hiders)
@@ -458,7 +471,7 @@ def main():
     if args['mode'] == MODE_VALIDATE:
         print("Curated and validated files:")
         utils._output_files(curated)
-        print("-----")
+        print("")
         print("Excluded files: ")
         print("  " + str(len(curated['excluded'])))
         print("Included files:")
@@ -473,11 +486,22 @@ def main():
         exit(0)
 
     if args['mode'] == MODE_CREATE:
+        formatter = None
+        if args['format'].lower() == OUTPUT_FORMAT_TEXT:
+            formatter = TextFormatter(utils)
+        elif args['format'].lower() == OUTPUT_FORMAT_JSON:
+            formatter = JSONFormatter(utils)
+        elif args['format'].lower() == OUTPUT_FORMAT_MARKDOWN:
+            formatter = MarkdownFormatter(utils)
+
+        format_report = formatter.format(report)
+            
         if args['output'] != None:
+            print("output: " + str(args['output']))
             with open(args['output'], "w") as manifest_file:
-                json.dump(report, manifest_file) 
+                manifest_file.write(format_report) 
         else:
-            print(json.dumps(report, indent=2))
+            print(format_report)
         
 
     
