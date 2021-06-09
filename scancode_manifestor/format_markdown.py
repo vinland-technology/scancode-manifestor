@@ -71,7 +71,7 @@ class MarkdownFormatter:
             res += "\n\n"
         for re_list in report["meta"]["arguments"]["excluded_regexps"]:
             for re in re_list:
-                res += str(" * <a name=\"" + re + "\"></a>'" + re + "\n\n" )
+                res += str(" * <a name=\"" + re + "\"></a>" + re + "\n\n" )
                 for f in files:
                     if f['type'] == "file":
                         #print("--------")
