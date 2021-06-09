@@ -136,6 +136,17 @@ def parse(commands):
                         help='output to file',
                         default=None)
     
+    parser.add_argument('-nc', '--no-conclusion',
+                        dest='no_conclusion',
+                        help='leave out conclusions from report',
+                        default=False)
+    
+    parser.add_argument('-ae', '--add-explanations',
+                        action='store_true',
+                        dest='add_explanations',
+                        help='add explanations about scetions to report',
+                        default=False)
+    
     parser.add_argument('-c', '--config',
                         help='read config file',
                         default=None)
@@ -488,11 +499,11 @@ def main():
     if args['mode'] == MODE_CREATE:
         formatter = None
         if args['format'].lower() == OUTPUT_FORMAT_TEXT:
-            formatter = TextFormatter(utils)
+            formatter = TextFormatter(args, utils)
         elif args['format'].lower() == OUTPUT_FORMAT_JSON:
-            formatter = JSONFormatter(utils)
+            formatter = JSONFormatter(args, utils)
         elif args['format'].lower() == OUTPUT_FORMAT_MARKDOWN:
-            formatter = MarkdownFormatter(utils)
+            formatter = MarkdownFormatter(args, utils)
 
         format_report = formatter.format(report)
             

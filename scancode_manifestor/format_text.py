@@ -16,8 +16,9 @@ import json
 
 class TextFormatter:
 
-    def __init__(self, utils):
+    def __init__(self, args, utils):
         self.utils = utils
+        self.args = args
 
     def format(self, report):
         res = "text report"

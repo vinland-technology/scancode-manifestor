@@ -16,8 +16,9 @@ import json
 
 class JSONFormatter:
 
-    def __init__(self, utils):
+    def __init__(self, args, utils):
         self.utils = utils
+        self.args = args
 
     def format(self, report):
         return str(json.dumps(report))
