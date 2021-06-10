@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# /usr/bin/python3
-
 ###################################################################
 #
 # Scancode report -> manifest creator
@@ -20,6 +18,8 @@ import os
 from scancode_manifestor.manifestor_utils import FilterAttribute
 import scancode_manifestor.explanations
 
+
+
 class MarkdownFormatter:
 
     def __init__(self, args, utils):
@@ -27,10 +27,12 @@ class MarkdownFormatter:
         self.args = args
         self.incl_lic_file = None
         self.excl_lic_file = None
-        self.header_cnt = 1
+
+    def _file_name_url(self, fn):
+        return "[" + fn + "](" + fn + ")"
 
     def _file_url(self, f):
-        return "[" + f['path'] + "](" + f['path'] + ")"
+        return self._file_name_url(f['path'])
 
 
     def _excluded_file(self, f):
@@ -56,18 +58,19 @@ class MarkdownFormatter:
     
     def _excluded_files(self, report):
         files = report['files']['excluded']
-        h = self._get_header()
         
-        res = "# " + h + " Excluded files"
+        res = "<a name=\"" + scancode_manifestor.explanations.EXCLUDED_FILES_HEADER + "\"></a>\n\n"
+        res += "# 5 " + scancode_manifestor.explanations.EXCLUDED_FILES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.EXCLUDED_FILES_EXPLANATION + "*"
             res += "\n\n"
             
-        res += "### " + h + ".1 Exclusion filters"
+        res += "<a name=\"" + scancode_manifestor.explanations.EXCLUDED_FILES_FILTERS_HEADER + "\"></a>\n\n"
+        res += "### 5.1 " + scancode_manifestor.explanations.EXCLUDED_FILES_FILTERS_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
-            res += "*" + scancode_manifestor.explanations.EXCLUDED_FILES_FILTER_EXPLANATION + "*"
+            res += "*" + scancode_manifestor.explanations.EXCLUDED_FILES_FILTERS_EXPLANATION + "*"
             res += "\n\n"
         for re_list in report["meta"]["arguments"]["excluded_regexps"]:
             for re in re_list:
@@ -86,7 +89,8 @@ class MarkdownFormatter:
                 res += "\n\n"
                 
         res += "\n\n"
-        res += "### " + h + ".2 Excluded files"
+        res += "<a name=\"" + scancode_manifestor.explanations.EXCLUDED_FILES_FILES_HEADER + "\"></a>\n\n"
+        res += "### 5.2 " + scancode_manifestor.explanations.EXCLUDED_FILES_FILES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.EXCLUDED_FILES_FILES_EXPLANATION + "*"
@@ -123,11 +127,14 @@ class MarkdownFormatter:
     def _included_files(self, report):
         files = report['files']['included']
 
-        h = self._get_header()
-        
-        res = "# " + h + " Included files"
+        res = "<a name=\"" + scancode_manifestor.explanations.INCLUDED_FILES_HEADER + "\"></a>\n\n"
+        res += "# 6 " + scancode_manifestor.explanations.INCLUDED_FILES_HEADER
         res += "\n\n"
-        res += "### " + h + ".1 Files"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.INCLUDED_FILES_EXPLANATION + "*"
+            res += "\n\n"
+        res += "<a name=\"" + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER + "\"></a>\n\n"
+        res += "### 6.1 " + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER
         res += "\n\n"
         for f in files:
             if f['type'] == 'file':
@@ -149,18 +156,28 @@ class MarkdownFormatter:
         self.excl_lic_file[lic].append(f)
 
 
+    def _add_lic_file_map(self, lic_map, lic, f):
+        if lic not in lic_map:
+            lic_map[lic] = []
+        lic_map[lic].append(f)
+
+
         
     def _license_summary(self, report):
-        h = self._get_header()
-        res = "# " + h + " Licenses"
+        # List files per  license (regardless whether included or excluded)
+        combined_license_files = {}
+        
+        res  = "<a name=\"" + scancode_manifestor.explanations.LICENSES_HEADER + "\"></a>\n\n"
+        res += "# 4 " + scancode_manifestor.explanations.LICENSES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
-            res += "*" + scancode_manifestor.explanations.LICENSE_EXPLANATION + "*"
+            res += "*" + scancode_manifestor.explanations.LICENSES_EXPLANATION + "*"
             res += "\n\n"
 
         # find included files' license
         for f in report['files']['included']:
             self._add_to_lic_file_map(f['scancode_manifestor']['license_key'], f )
+            self._add_lic_file_map(combined_license_files, f['scancode_manifestor']['license_key'], f['path'])
         # find excluded files' license
         for f in report['files']['excluded']:
             if 'scancode_manifestor' in f and 'license_key' in f['scancode_manifestor']:
@@ -168,13 +185,30 @@ class MarkdownFormatter:
             else:
                 lic_key = "unknown"
             self._add_to_excl_lic_file_map(str(lic_key), f)
+            self._add_lic_file_map(combined_license_files, lic_key, f['path'])
+
         
             
-        # included files
-        res += "## " + h + ".1 Licenses for included files"
+        # all licenses with and files
+        res += "<a name=\"" + scancode_manifestor.explanations.LICENSES_ALL_FILES_HEADER + "\"></a>\n\n"
+        res += "## 4.1 " + scancode_manifestor.explanations.LICENSES_ALL_FILES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
-            res += "*" + scancode_manifestor.explanations.LICENSE_INCLDUED_EXPLANATION + "*"
+            res += "*" + scancode_manifestor.explanations.LICENSES_ALL_FILES_EXPLANATION + "*"
+            res += "\n\n"
+        for k,v in combined_license_files.items():
+            res += " * " + str(k)
+            res += "\n\n"
+            for f in v:
+                res += "    * " + self._file_name_url(f)
+                res += "\n\n"
+            
+        # included files
+        res += "<a name=\"" + scancode_manifestor.explanations.LICENSES_INCLUDED_FILES_HEADER + "\"></a>\n\n"
+        res += "## 4.2 " + scancode_manifestor.explanations.LICENSES_INCLUDED_FILES_HEADER
+        res += "\n\n"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.LICENSES_INCLDUED_EXPLANATION + "*"
             res += "\n\n"
         for k,v in self.incl_lic_file.items():
             res += " * " + k
@@ -184,10 +218,11 @@ class MarkdownFormatter:
                 res += "\n\n"
         
         # excluded files
-        res += "## " + h + ".2 Licenses for excluded files"
+        res += "<a name=\"" + scancode_manifestor.explanations.LICENSES_EXCLUDED_FILES_HEADER + "\"></a>\n\n"
+        res += "## 4.3 " + scancode_manifestor.explanations.LICENSES_EXCLUDED_FILES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
-            res += "*" + scancode_manifestor.explanations.LICENSE_EXCLDUED_EXPLANATION + "*"
+            res += "*" + scancode_manifestor.explanations.LICENSES_EXCLDUED_EXPLANATION + "*"
             res += "\n\n"
         for k,v in self.excl_lic_file.items():
             res += " * " + k
@@ -197,37 +232,72 @@ class MarkdownFormatter:
                 res += "\n\n"
         return res
 
-    def _get_header(self):
-        keep = self.header_cnt
-        self.header_cnt += 1
-        return str(keep)
-    
     def _conclusion_summary(self, report):
         if self.args['no_conclusion']:
             return ""
         
-        h = self._get_header()
-        
-        res = "# " + h + " Conclusion"
+        res = "# 3 Conclusion"
         res += "\n\n"
-        res += "## " + h + ".1 Copyrights"
+        res += "## 3.1 Copyrights"
         res += "\n\n"
         for c in report['conclusion']['copyright']:
             res += " * " + str(c)
             res += "\n\n"
-        res += "## " + h + ".2 Licenses"
+        res += "## 3.2 Licenses"
         res += "\n\n"
         res += " * ***Original***: " + report['conclusion']['license_expression_original']
         res += "\n\n"
         res += " * ***Simplified***: " + report['conclusion']['license_expression']
 
         return res
-    
+
+    def _key_to_str(self, data, key):
+        if key in data:
+            return str(data[key])
+        else:
+            return " missing "
+
+    def _header_link(self, header):
+        return "[" + header + "](#" + header + ")\n\n"
+        
     def format(self, report):
         uname=os.uname()
-        res = "# Scancode manifestor report"
+        res = "# 1 Scancode manifestor report"
         res += "\n\n"
-        res += "## Meta information"
+        res += "## 1.1 Table of content"
+        res += "\n\n"
+        res += " 1 Scancode manifestor report"
+        res += "\n\n"
+        res += " 2 " + self._header_link(scancode_manifestor.explanations.ABOUT_SCANCODE_REPORT)
+        res += " 3 Conclusions\n\n"
+        res += " 4 " +   self._header_link(scancode_manifestor.explanations.LICENSES_HEADER)
+        res += " 4.1 " + self._header_link(scancode_manifestor.explanations.LICENSES_ALL_FILES_HEADER)
+        res += " 4.2 " + self._header_link(scancode_manifestor.explanations.LICENSES_INCLUDED_FILES_HEADER)
+        res += " 4.3 " + self._header_link(scancode_manifestor.explanations.LICENSES_EXCLUDED_FILES_HEADER)
+        res += " 5 " +   self._header_link(scancode_manifestor.explanations.EXCLUDED_FILES_HEADER)
+        res += " 5.1 " +   self._header_link(scancode_manifestor.explanations.EXCLUDED_FILES_FILTERS_HEADER)
+        res += " 5.2 " +   self._header_link(scancode_manifestor.explanations.EXCLUDED_FILES_FILES_HEADER)
+        res += " 6 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_HEADER)
+        res += " 6.1 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER)
+        res += "\n\n"
+        res += "# 2 " + scancode_manifestor.explanations.ABOUT_SCANCODE_REPORT
+        res += "\n\n"
+        scan_str = None
+        if 'meta' in report:
+            meta=report['meta']
+            scan_str = " * ***Scancode report file***: " + self._file_name_url(self._key_to_str(meta, 'scancode_report_file'))
+            scan_str += "\n\n"
+            scan_str += " * ***Tool***: " + self._key_to_str(meta, 'scancode_name')
+            scan_str += "\n\n"
+            scan_str += " * ***Version***: " + self._key_to_str(meta, 'scancode_version')
+            scan_str += "\n\n"
+        if scan_str == None:
+            scan_str = "*no header section found in Scancode report*"
+            scan_str += "\n\n"
+
+        res += scan_str
+        
+        res += "## Meta information report"
         res += "\n\n"
         res += " * ***date***: " + str(datetime.datetime.now())
         res += "\n\n"
@@ -238,6 +308,7 @@ class MarkdownFormatter:
         res += " * ***machine***: " + uname.machine
         res += "\n\n"
         res += " * ***node***: " + uname.nodename
+        res += "\n\n"
         res += "\n\n"
 
         res += self._conclusion_summary(report)
