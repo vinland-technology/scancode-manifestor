@@ -652,7 +652,9 @@ class ManifestUtils:
         report['meta']['arguments'] = args #.__dict__
         report['meta']['report_date'] = str(datetime.datetime.now())
         report['meta']['scancode_report_file'] = args['input_file']
-#        report['meta']['scancode_report_content'] = scancode_report
+        report['meta']['scancode_name'] = scancode_report['headers'][0]['tool_name']
+        report['meta']['scancode_version'] = scancode_report['headers'][0]['tool_version']
+        #report['meta']['scancode_report'] = scancode_report
 
         return report
 
