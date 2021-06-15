@@ -34,7 +34,6 @@ class MarkdownFormatter:
     def _file_url(self, f):
         return self._file_name_url(f['path'])
 
-
     def _excluded_file(self, f):
         res = " * " + self._file_url(f)
         res += "\n\n"
@@ -150,7 +149,15 @@ class MarkdownFormatter:
                 res += self._included_file(f)+ "\n\n"
         return res
 
-    def _add_to_lic_file_map(self, lic, f):
+    def _add_to_lic_file_map(self, f):
+        lic = f['scancode_manifestor']['license_key']
+        #print("Add lic for: " + str(f['path']) + "  => " + str(lic))
+        if lic == None:
+            lic = f['scancode_manifestor']['curated_license']
+        if lic == None:
+            print("still lic == None")
+            exit(0)
+            
         if self.incl_lic_file == None:
             self.incl_lic_file = {}
         if lic not in self.incl_lic_file:
@@ -185,7 +192,7 @@ class MarkdownFormatter:
 
         # find included files' license
         for f in report['files']['included']:
-            self._add_to_lic_file_map(f['scancode_manifestor']['license_key'], f )
+            self._add_to_lic_file_map(f )
             self._add_lic_file_map(combined_license_files, f['scancode_manifestor']['license_key'], f['path'])
         # find excluded files' license
         for f in report['files']['excluded']:
@@ -245,11 +252,14 @@ class MarkdownFormatter:
         if self.args['no_conclusion']:
             return ""
         
-        res = "# 3 " + scancode_manifestor.explanations.CONCLUSION_HEADER
+        res = "<a name=\"" + scancode_manifestor.explanations.CONCLUSION_HEADER + "\"></a>\n\n"
+        res += "# 3 " + scancode_manifestor.explanations.CONCLUSION_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.CONCLUSION_EXPLANATION + "*"
             res += "\n\n"
+            
+        res += "<a name=\"" + scancode_manifestor.explanations.CONCLUSION_COPYRIGHTS_HEADER + "\"></a>\n\n"
         res += "## 3.1 "  + scancode_manifestor.explanations.CONCLUSION_COPYRIGHTS_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
@@ -260,6 +270,8 @@ class MarkdownFormatter:
             res += "\n\n"
         res += "*Note: the copyrigh holders listed  here may not be complete*"
         res += "\n\n"
+
+        res += "<a name=\"" + scancode_manifestor.explanations.CONCLUSION_LICENSES_HEADER + "\"></a>\n\n"
         res += "## 3.2 "  + scancode_manifestor.explanations.CONCLUSION_LICENSES_HEADER
         res += "\n\n"
         if self.args['add_explanations']:
@@ -268,6 +280,16 @@ class MarkdownFormatter:
         res += " * ***Original***: " + report['conclusion']['license_expression_original']
         res += "\n\n"
         res += " * ***Simplified***: " + report['conclusion']['license_expression']
+        res += "\n\n"
+
+        #res += "## 7.3 "  + scancode_manifestor.explanations.CONCLUSION_INCLUDED_LICENSES_HEADER
+        #res += "\n\n"
+        #if self.args['add_explanations']:
+        #    res += "*" + scancode_manifestor.explanations.CONCLUSION_INCLUDED_LICENSES_EXPLANATION + "*"
+        #    res += "\n\n"
+        #for k,v in self.incl_lic_file.items():
+        #    res += " * " + str(k)
+        #    res += "\n\n"
 
         return res
 
@@ -289,7 +311,10 @@ class MarkdownFormatter:
         res += " 1 Scancode manifestor report"
         res += "\n\n"
         res += " 2 " + self._header_link(scancode_manifestor.explanations.ABOUT_SCANCODE_REPORT)
-        res += " 3 Conclusions\n\n"
+        res += " 3 " +   self._header_link(scancode_manifestor.explanations.CONCLUSION_HEADER)
+        res += " 3.1 " +   self._header_link(scancode_manifestor.explanations.CONCLUSION_COPYRIGHTS_HEADER)
+        res += " 3.2 " +   self._header_link(scancode_manifestor.explanations.CONCLUSION_LICENSES_HEADER)
+        #res += " 7.3 " +   self._header_link(scancode_manifestor.explanations.CONCLUSION_INCLUDED_LICENSES_HEADER)
         res += " 4 " +   self._header_link(scancode_manifestor.explanations.LICENSES_HEADER)
         res += " 4.1 " + self._header_link(scancode_manifestor.explanations.LICENSES_ALL_FILES_HEADER)
         res += " 4.2 " + self._header_link(scancode_manifestor.explanations.LICENSES_INCLUDED_FILES_HEADER)
@@ -344,5 +369,8 @@ class MarkdownFormatter:
         res += "\n\n"
 
         res += self._included_files(report)
+
+        res += "\n\n"
+
 
         return res
