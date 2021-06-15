@@ -105,23 +105,32 @@ class MarkdownFormatter:
         res += "\n\n"
         res += "    * ***file type***: " + str(f['file_type']).strip()
         manifestor_map = f['scancode_manifestor']
-        c_license = manifestor_map['curated_license']
         res += "\n\n"
-        res += "    * ***original license***: " + manifestor_map['license_key']
+        res += "    * ***original license***: " + str(manifestor_map['license_key'])
         res += "\n\n"
-        res += "    * ***curated license***: " + c_license 
-        res += "\n\n"
-        res += "    * ***curation cause***:" 
-        if 'curation_type' in manifestor_map:
-            c_type = manifestor_map['curation_type']
-            c_expr = manifestor_map['curation_expr']
-            
-            if c_type == 'file':
-                res += " file name matches \"" +  c_expr + "\"" 
+        if 'curated_license' in manifestor_map:
+            c_license = manifestor_map['curated_license']
+            res += "    * ***curated license***: " + c_license 
+            res += "\n\n"
+            res += "    * ***curation reason***:" 
+            if 'curation_type' in manifestor_map:
+                #print(str(manifestor_map))
+                c_type = manifestor_map['curation_type']
+                c_expr = manifestor_map['curation_expr']
+
+                if c_type == 'file':
+                    res += " file name matches \"" +  c_expr + "\"" 
+                elif c_type == 'license':
+                    if c_expr == "[]":
+                        res += " missing license curation"
+                    else:
+                        res += " license name matches \"" +  c_expr + "\"" 
+                else:
+                    res += " ERROR: missing regexpr unknown curation type " + str(c_type)
             else:
-                res += " ERROR: missing regexpr unknown curation type " + str(c_type)
+                res += " ERROR: missing c_type in curation"
         else:
-            res += " ERROR: missing c_type in curation"
+            pass
         return res 
 
     def _included_files(self, report):
@@ -211,7 +220,7 @@ class MarkdownFormatter:
             res += "*" + scancode_manifestor.explanations.LICENSES_INCLDUED_EXPLANATION + "*"
             res += "\n\n"
         for k,v in self.incl_lic_file.items():
-            res += " * " + k
+            res += " * " + str(k)
             res += "\n\n"
             for f in v:
                 res += "    * " + self._file_url(f)
@@ -236,15 +245,26 @@ class MarkdownFormatter:
         if self.args['no_conclusion']:
             return ""
         
-        res = "# 3 Conclusion"
+        res = "# 3 " + scancode_manifestor.explanations.CONCLUSION_HEADER
         res += "\n\n"
-        res += "## 3.1 Copyrights"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.CONCLUSION_EXPLANATION + "*"
+            res += "\n\n"
+        res += "## 3.1 "  + scancode_manifestor.explanations.CONCLUSION_COPYRIGHTS_HEADER
         res += "\n\n"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.CONCLUSION_COPYRIGHTS_EXPLANATION + "*"
+            res += "\n\n"
         for c in report['conclusion']['copyright']:
             res += " * " + str(c)
             res += "\n\n"
-        res += "## 3.2 Licenses"
+        res += "*Note: the copyrigh holders listed  here may not be complete*"
         res += "\n\n"
+        res += "## 3.2 "  + scancode_manifestor.explanations.CONCLUSION_LICENSES_HEADER
+        res += "\n\n"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.CONCLUSION_LICENSES_EXPLANATION + "*"
+            res += "\n\n"
         res += " * ***Original***: " + report['conclusion']['license_expression_original']
         res += "\n\n"
         res += " * ***Simplified***: " + report['conclusion']['license_expression']
