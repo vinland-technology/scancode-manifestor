@@ -277,9 +277,9 @@ class MarkdownFormatter:
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.CONCLUSION_LICENSES_EXPLANATION + "*"
             res += "\n\n"
-        res += " * ***Original***: " + report['conclusion']['license_expression_original']
+        res += " * ***Original***: " + str(report['conclusion']['license_expression_original'])
         res += "\n\n"
-        res += " * ***Simplified***: " + report['conclusion']['license_expression']
+        res += " * ***Simplified***: " + str(report['conclusion']['license_expression'])
         res += "\n\n"
 
         #res += "## 7.3 "  + scancode_manifestor.explanations.CONCLUSION_INCLUDED_LICENSES_HEADER
