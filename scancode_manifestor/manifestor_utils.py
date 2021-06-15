@@ -350,7 +350,7 @@ class ManifestUtils:
                     spdx_expr = ""
                 else:
                     spdx_expr += " and "
-                spdx_expr += lic
+                spdx_expr += str(lic)
 
 
             #print("lic: " + str(lic_expr))
@@ -393,7 +393,7 @@ class ManifestUtils:
                 self._add_scancode_manifestor_data(f, 'curation_type', 'file')
                 self._add_scancode_manifestor_data(f, 'curation_expr', regexpr)
                 self._add_scancode_manifestor_data(f, 'curated_license', lic)
-        return files
+
 
     def _curate_license(self, files, regexpr, lic):
         curations = 0 
@@ -406,9 +406,11 @@ class ManifestUtils:
             if regexpr == "[]":
                 #print("HERE I AM " + str(f))
                 if 'license_key' not in f:
+                    #print(" * " + str(f['name']))
                     self.logger.verbose(f['name'] + " missing license_key => " + lic)
                     self._add_scancode_manifestor_data(f, 'curation_type', 'license')
                     self._add_scancode_manifestor_data(f, 'curated_license', lic)
+                    self._add_scancode_manifestor_data(f, 'curation_expr', "[]")
 #                    f['license_key'] = lic
                     curations += 1
 
@@ -416,6 +418,7 @@ class ManifestUtils:
                     self.logger.verbose(f['name'] + " " + str(f['license_key']) + " => " + lic)
                     self._add_scancode_manifestor_data(f, 'curation_type', 'license')
                     self._add_scancode_manifestor_data(f, 'curated_license', lic)
+                    self._add_scancode_manifestor_data(f, 'curation_expr', "[]")
 #                    f['license_key'] = lic
                     curations += 1
             elif 'license_key' not in f:
@@ -435,7 +438,7 @@ class ManifestUtils:
         return curations
 
     def _curate(self, files, file_curations, license_curations, missing_license_curation):
-        curated = files
+        #print("curate cml: " + str(missing_license_curation))
         self.logger.verbose("curations: " + str(file_curations))
                 
         for curation in file_curations:
@@ -450,7 +453,7 @@ class ManifestUtils:
                 # TODO: make sure lic is a valid license
                 for i in range(0,length-1):
                     self.logger.verbose("      * " + curation[i] + " => " + lic)
-                    curated = self._curate_file_license(curated, curation[i], lic)
+                    self._curate_file_license(files, curation[i], lic)
 
         for curation in license_curations:
             self.logger.verbose("  * " + str(curation))
@@ -464,13 +467,12 @@ class ManifestUtils:
                 # TODO: make sure lic is a valid license
                 for i in range(0,length-1):
                     self.logger.verbose("      * " + curation[i] + " => " + lic)
-                    curated = self._curate_license(curated, curation[i], lic)
+                    self._curate_license(files, curation[i], lic)
 
         if missing_license_curation:
-            #print("curated: " + str(curated))
-            curated = self._curate_license(curated, "[]", missing_license_curation)
+            self._curate_license(files, "[]", missing_license_curation)
 
-        return curated
+        return files
 
     def _count_files(self, files):
         cnt = 0 
@@ -537,9 +539,14 @@ class ManifestUtils:
             if f['name'] == None or f['name'] == "":
                 errors.append("File name can't be None or \"\"")
             if manifest_map['license_key'] == None or manifest_map['license_key'] == []:
-                errors.append("Error for " + f['name'] + ": license can't be None or [].")
+                curated = False
+                if 'curation_type' in manifest_map and 'curated_license' in manifest_map:
+                    if manifest_map['curation_type']  == 'license' and manifest_map['curated_license'] != None:
+                        curated = True
+                if not curated:
+                    errors.append("Error for " + f['path'] + ": license can't be None or [].")
             if manifest_map['copyright'] == None or manifest_map['copyright'] == []:
-                warnings.append("Warning for " + f['name'] + ": copyright can't be None or [].")
+                warnings.append("Warning for " + f['path'] + ": copyright can't be None or [].")
 
 
         if outbound_license:
@@ -562,7 +569,7 @@ class ManifestUtils:
 
         return { 'dirs': dirs, 'files': files}
 
-    def _report(self, args, scancode_report, _files, curations):
+    def _report(self, args, scancode_report, _files):
         copyrights = set()
         licenses = set()
         spdx = set()
@@ -648,7 +655,7 @@ class ManifestUtils:
         # Meta information
         #
         report['meta']={}
-        report['meta']['curations'] = curations
+        #report['meta']['curations'] = curations
         report['meta']['arguments'] = args #.__dict__
         report['meta']['report_date'] = str(datetime.datetime.now())
         report['meta']['scancode_report_file'] = args['input_file']
@@ -808,14 +815,14 @@ class ManifestUtils:
 
 
 
-    def output_args_to_file(self, args):
+    def _output_args_to_file(self, args):
         self.logger.verbose("Storing config..")
-        out_file = _get_config_file_name(args)
-        verbose("Storing config to: \"" + str(out_file) + "\"")
+        out_file = self._get_config_file_name(args)
+        self.logger.verbose("Storing config to: \"" + str(out_file) + "\"")
         if out_file != None:
             if os.path.isfile(out_file):
                 if not args['forced_config_mode']:
-                    warn("File '" + out_file + "' already exists. Remove it, use another name or use forced mode (-f))")
+                    self.logger.warn("File '" + out_file + "' already exists. Remove it, use another name or use forced mode (-f))")
                     # TODO: throw exception instead of exit
                     exit(1)
             sys.stdout = open(out_file, 'w')
