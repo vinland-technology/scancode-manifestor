@@ -388,7 +388,6 @@ class ManifestUtils:
     def _curate_file_license(self, files, regexpr, lic):
         for f in files['included']:
             if re.search(regexpr, f['path']):
-                #self.logger.verbose(f['name'] + " " + str(f['license']) + " => " + lic)
                 self.logger.verbose(f['name'] + " => " + lic)
                 self._add_scancode_manifestor_data(f, 'curation_type', 'file')
                 self._add_scancode_manifestor_data(f, 'curation_expr', regexpr)
