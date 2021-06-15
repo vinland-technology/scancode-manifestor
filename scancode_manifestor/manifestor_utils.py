@@ -542,8 +542,12 @@ class ManifestUtils:
                 if 'curation_type' in manifest_map and 'curated_license' in manifest_map:
                     if manifest_map['curation_type']  == 'license' and manifest_map['curated_license'] != None:
                         curated = True
+                    elif manifest_map['curation_type']  == 'file' and manifest_map['curated_license'] != None:
+                        curated = True
                 if not curated:
                     errors.append("Error for " + f['path'] + ": license can't be None or [].")
+                #else:
+                    #print("Curated... " + str(f['path']))
             if manifest_map['copyright'] == None or manifest_map['copyright'] == []:
                 warnings.append("Warning for " + f['path'] + ": copyright can't be None or [].")
 
@@ -582,7 +586,12 @@ class ManifestUtils:
             self.logger.verbose("collecting info " + str(f['name']) + " " + str(manifest_map['license_key']))
             for c in manifest_map['copyright']:
                 copyrights.add(c)
-            licenses.add(manifest_map['license_key'])
+            lic_key = manifest_map['license_key']
+            if lic_key == None:
+                lic_key = f['scancode_manifestor']['curated_license']
+                #print("wooops.... : " + str(f['path']) + " has " + f['scancode_manifestor']['curated_license'])
+            else:
+                licenses.add(lic_key)
             spdx.add(manifest_map['license_spdx'])
 
         lic_expr = None
