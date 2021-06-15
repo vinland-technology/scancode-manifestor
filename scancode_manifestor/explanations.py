@@ -16,6 +16,21 @@
 
 ABOUT_SCANCODE_REPORT="About the Scancode report"
 
+## Conclusion section
+
+CONCLUSION_EXPLANATION="This section lists the conclusion autmatically calculated by the tool."
+
+CONCLUSION_HEADER="Conclusion"
+
+CONCLUSION_COPYRIGHTS_HEADER="Copyrights"
+
+CONCLUSION_COPYRIGHTS_EXPLANATION="Copyright holders as detected by the tool."
+
+CONCLUSION_LICENSES_HEADER="Licenses"
+
+CONCLUSION_LICENSES_EXPLANATION="Licenses as detected by the tool."
+
+
 ## Licenses section
 
 LICENSES_EXPLANATION="This section lists the licenses of the included and excluded files"
