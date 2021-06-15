@@ -28,7 +28,7 @@ CONCLUSION_COPYRIGHTS_EXPLANATION="Copyright holders as detected by the tool."
 
 CONCLUSION_LICENSES_HEADER="Licenses"
 
-CONCLUSION_LICENSES_EXPLANATION="Licenses as detected by the tool."
+CONCLUSION_LICENSES_EXPLANATION="Licenses as detected by the tool. The different licenses are simply AND:ed together and presented as \"Original\". The \"Original\" license expression is also simpled (boolean algebra) and presented as \"Simpified\"."
 
 
 ## Licenses section
