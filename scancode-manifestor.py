@@ -349,13 +349,14 @@ class ScancodeManifestor:
         self.logger.verbose("args       : " + str(json.dumps(args)))
         self.logger.verbose("")
         for k,v in config_args.items():
+            #print("k : " + str(k))
             self.logger.verbose(" * " + str(k))
             self.logger.verbose("   * " + str(v))
-            self.logger.verbose("   * " + str(args[k]))
+            #self.logger.verbose("   * " + str(args[k]))
             v_type = type(config_args[k])
             self.logger.verbose("    * " + str(v_type))
             new_args[k] = config_args[k]
-            if args[k] == None or args[k] == [] :
+            if k not in args or args[k] == None or args[k] == [] :
                 pass
             else:
                 if isinstance(config_args[k],list):
