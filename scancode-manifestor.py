@@ -136,6 +136,12 @@ def parse(commands):
                         help='output to file',
                         default=None)
     
+    parser.add_argument('--output-filters',
+                        action='store_true',
+                        dest='output_filters',
+                        help='output filter to stdout',
+                        default=False)
+    
     parser.add_argument('-nc', '--no-conclusion',
                         dest='no_conclusion',
                         help='leave out conclusions from report',
@@ -311,6 +317,7 @@ def parse(commands):
 
     return args
 
+
 class ScancodeManifestor:
     def __init__(self, commands, logger, utils):
         self.commands = commands
@@ -320,6 +327,18 @@ class ScancodeManifestor:
     def _setup_files(self, files):
         return self.utils._files_map(files, [])
 
+    def _output_filters(self, args):
+        print("#################################################")
+        print("# Excluded file expressions")
+        print("#  - generated from scancode-manifestory.py")
+        print("#################################################")
+        print("#")
+        print("")
+        for el in args['excluded_regexps']:
+            for e in el:
+                print(e + "\n")
+            
+        
     def _read_merge_args(self, args):
         new_args = {}
         self.logger.verbose("read config: " + str(args['config']))
@@ -395,7 +414,14 @@ def main():
             logger.error("Can't save config file if hide options are used. Remove the following options from your command line and try again: " + str(keys))
             exit(2)
             
-        utils.output_args_to_file(args)
+        utils._output_args_to_file(args)
+        exit(0)
+
+    #
+    # if outputfilters mode - dump filters and leave
+    #
+    if args['output_filters']:
+        manifestor._output_filters(args)
         exit(0)
 
     # check inconsistent arguments
@@ -470,7 +496,7 @@ def main():
     #
     # validate
     #
-    report = utils._report(args, scancode_report, transformed, curations)
+    report = utils._report(args, scancode_report, transformed)
     validation = utils._validate(curated, report, args['outbound_license'])
     if validation['errors'] != []:
         for err in validation['errors']:
