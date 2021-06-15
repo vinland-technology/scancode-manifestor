@@ -696,7 +696,11 @@ class ManifestUtils:
         with_copyright = False
         for f in files['included']:
             manifestor_map = f['scancode_manifestor']
-            license_info = "[ " + manifestor_map['license_key'] + " : " + self._curated_license(f)  + " : " + self._curation_type(f) + " ]"
+            #print("mm: " + str(manifestor_map))
+            lk = manifestor_map['license_key']
+            if lk == None:
+                lk = " none "
+            license_info = "[ " + lk + " : " + self._curated_license(f)  + " : " + self._curation_type(f) + " ]"
             if with_copyright:
                 print(str(f['name']) + " [" + license_info + "] [", end="" )
                 for c in f['copyright']:
