@@ -18,17 +18,21 @@ ABOUT_SCANCODE_REPORT="About the Scancode report"
 
 ## Conclusion section
 
-CONCLUSION_EXPLANATION="This section lists the conclusion autmatically calculated by the tool."
+CONCLUSION_EXPLANATION="This section lists the conclusion, of the included files, autmatically calculated by the tool."
 
 CONCLUSION_HEADER="Conclusion"
 
-CONCLUSION_COPYRIGHTS_HEADER="Copyrights"
+CONCLUSION_COPYRIGHTS_HEADER="Concluded copyrights"
 
-CONCLUSION_COPYRIGHTS_EXPLANATION="Copyright holders as detected by the tool."
+CONCLUSION_COPYRIGHTS_EXPLANATION="Copyright holders, of the included files, as detected by the tool."
 
-CONCLUSION_LICENSES_HEADER="Licenses"
+CONCLUSION_LICENSES_HEADER="Concluded licenses"
 
 CONCLUSION_LICENSES_EXPLANATION="Licenses as detected by the tool. The different licenses are simply AND:ed together and presented as \"Original\". The \"Original\" license expression is also simpled (boolean algebra) and presented as \"Simpified\"."
+
+CONCLUSION_INCLUDED_LICENSES_HEADER="Licenses for included files"
+
+#CONCLUSION_INCLUDED_LICENSES_EXPLANATION="Licenses ... more info soon"
 
 
 ## Licenses section
