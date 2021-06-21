@@ -47,11 +47,14 @@ class ManifestorInteractor:
         args['missing_license_curation']=lic
 
     def _curated_info(self, files, args):
-        transformed = self.utils._transform_files(files)
-        self.utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
+        self.utils._transform_files(files)
+        transformed = files
 
+        self.utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
+        
         curated = {}
         curated['files'] = transformed
+        print("kjaskashdakhds: " + str())
         curated['included_count'] = self.utils._count_files_transformed(transformed['included'])
         curated['excluded_count'] = self.utils._count_files_transformed(transformed['excluded'])
         curated['unknown_count'] = self.utils._unknown_license_count_transformed(transformed['included'])
