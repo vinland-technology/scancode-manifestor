@@ -588,8 +588,12 @@ class ManifestUtils:
                 copyrights.add(c)
             lic_key = manifest_map['license_key']
             if lic_key == None:
-                lic_key = f['scancode_manifestor']['curated_license']
-                #print("wooops.... : " + str(f['path']) + " has " + f['scancode_manifestor']['curated_license'])
+                if 'scancode_manifestor' in f['scancode_manifestor']:
+                    lic_key = f['scancode_manifestor']['curated_license']
+                    #print("wooops.... : " + str(f['path']) + " has " + f['scancode_manifestor']['curated_license'])
+                else:
+                    lic_key = " none "
+                
             else:
                 licenses.add(lic_key)
             spdx.add(manifest_map['license_spdx'])
