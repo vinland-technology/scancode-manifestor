@@ -1,5 +1,5 @@
 
-TEST_FILES=filter.py match.py misc.py
+TEST_FILES=test_filter.py test_match.py test_misc.py test_curate_license.py
 
 all: test
 
