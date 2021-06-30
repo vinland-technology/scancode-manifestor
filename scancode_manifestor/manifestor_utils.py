@@ -418,7 +418,7 @@ class ManifestUtils:
         if ('scancode_manifestor' not in f) or (f['scancode_manifestor']['license_key']==None):
             #print(" * " + str(f['name']))
             self.logger.verbose(f['name'] + " missing license_key => " + lic)
-            if "dumps" in f['path']:
+            #if "dumps" in f['path']:
                 #print(" *** FILE: " + str(f['path']))
                 #print(" *** FILE: " + str(json.dumps(f, indent=4)))
                 #print(" *** FILE: " + str(f))
