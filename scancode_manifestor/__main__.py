@@ -475,7 +475,7 @@ def main():
     # Continue with pipe, but first verbose files
     #
     if args['verbose']:
-        logger.logger.verbose("---- filtered files -----")
+        logger.verbose("---- filtered files -----")
         utils._output_filtered(filtered, sys.stderr, hiders)
 
     #

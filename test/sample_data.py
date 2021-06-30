@@ -1,4 +1,13 @@
 #!/usr/bin/python3
+###################################################################
+#
+# Scancode report -> manifest creator
+#
+# SPDX-FileCopyrightText: 2021 Henrik Sandklef
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+###################################################################
 
 def sample_file(name, path, licenses):
     file = {}
