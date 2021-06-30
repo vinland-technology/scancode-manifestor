@@ -24,7 +24,9 @@ then
         echo "*** Missing config file \"config.json\" ***"
         exit 2
     fi
-    SCANCODE_MANIFESTOR_PY="$( realpath "${BASH_SOURCE[0]}" | sed 's,\.sh,\.py,g')"
+    PATH=~/.local/bin:${PATH}
+    #SCANCODE_MANIFESTOR_PY="$( realpath "${BASH_SOURCE[0]}" | sed 's,\.sh,\.py,g')"
+    SCANCODE_MANIFESTOR_PY=scancode-manifestor
     $SCANCODE_MANIFESTOR_PY $DEBUG_FLAGS -ae -i $SC_REPORT -c config.json -of markdown -- create > manifest.md
     if [ $? -ne 0 ]
     then
