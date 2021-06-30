@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# /usr/bin/python3
-
 ###################################################################
 #
 # Scancode report -> manifest creator
@@ -14,7 +12,13 @@
 
 ## About scancode
 
-ABOUT_SCANCODE_REPORT="About the Scancode report"
+ABOUT_SCANCODE_REPORT="About the report"
+
+ABOUT_SCANCODE_REPORT_SCANCODE="Scancode report"
+
+ABOUT_SCANCODE_REPORT_META="Meta information"
+
+ABOUT_SCANCODE_REPORT_SETTINGS="Configuration"
 
 ## Conclusion section
 
@@ -87,3 +91,17 @@ INCLUDED_FILES_FILES_HEADER="Included files"
 INCLUDED_FILES_FILTERS_EXPLANATION="This sections lists the file inclusion filters. For each filter a list files included by this filter is displayed. Files are linked to the actual files so you can easily check the source code yourself."
 
 INCLUDED_FILES_FILES_EXPLANATION="This sections lists the files included by filters. For each file the file type and the filter causing the inclusions is displayed. Files are linked to the actual files so you can easily check the source code yourself. The filter is linked to the filter list in section \"" + INCLUDED_FILES_FILTERS_HEADER + "\"."
+
+## Included files section
+
+CURATED_FILES_EXPLANATION="This sections lists the included (distributed) files that have been curated."
+
+CURATED_FILES_HEADER="Included files by curations"
+
+CURATED_FILES_FILE_HEADER="File name pattern"
+
+CURATED_FILES_MISSING_HEADER="Missing license"
+
+CURATED_FILES_FILE_EXPLANATION="This sections lists the included files that have been curated, ordered by file matching expression. Files are linked to the actual files so you can easily check the source code yourself."
+
+CURATED_FILES_MISSING_EXPLANATION="This sections lists the distributed files originally without license. Files are linked to the actual files so you can easily check the source code yourself."
