@@ -25,6 +25,7 @@ VERBOSE=False
 # manifestor_data {
 #   filter_type
 #   filter_expr
+#   filter_action
 #   license_key
 #   license_spdx
 #   copyright
@@ -250,15 +251,20 @@ class ManifestUtils:
         for f in files['included']:
             file_path = f['path']
             match = self._match_file(f, filter, regexpr, include, only)
-            #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)))
+            #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)), file=sys.stderr)
             if match == None:
                 warn("Can't match: " + regexpr)
             else:
+
+                
                 keep = self._keep_file(match, include)
+
+                #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)) + "  ==> " + str(keep), file=sys.stderr)
                 if not keep:
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)) + " " + str(f) )
-                    
+
                     self._add_scancode_manifestor_data(f, 'filter_type', filter)
+                    self._add_scancode_manifestor_data(f, 'filter_action', include)
                     self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
                     excluded.append(f)
 
@@ -266,6 +272,15 @@ class ManifestUtils:
                     #print("woops: " + str(f['scancode_manifestor']))
                     files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)))
+
+                else:
+                    # OK, we should keep it
+
+                    # if we explcitly included it, mark it as such
+                    if include == FilterAction.INCLUDE:
+                        self._add_scancode_manifestor_data(f, 'filter_type', filter)
+                        self._add_scancode_manifestor_data(f, 'filter_action', include)
+                        self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
 
 
         return self._files_map(included, excluded)
@@ -893,4 +908,21 @@ class ManifestUtils:
         return True
 
 
+def FilterAttribute_to_string(filter):
+    if filter == FilterAttribute.PATH:
+        return "file"
+    elif filter == FilterAttribute.COPYRIGHT:
+        return "copyright"
+    elif filter == FilterAttribute.LICENSE:
+        return "license"
+    else:
+        return "unknown"
 
+def FilterAction_to_string(action):
+    if action == FilterAction.INCLUDE:
+        return "include"
+    elif action == FilterAction.EXCLUDE:
+        return "exclude"
+    else:
+        return "unknown"
+    
