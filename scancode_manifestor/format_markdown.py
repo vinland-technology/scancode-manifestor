@@ -17,6 +17,8 @@ import os
 import sys
 
 from scancode_manifestor.manifestor_utils import FilterAttribute
+from scancode_manifestor.manifestor_utils import FilterAttribute_to_string
+from scancode_manifestor.manifestor_utils import FilterAction_to_string
 import scancode_manifestor.explanations
 
 
@@ -54,18 +56,23 @@ class MarkdownFormatter:
         res += "    * ***file type***:" + str(f['file_type']).strip()
         manifestor_map = f['scancode_manifestor']
         if 'filter_type' in manifestor_map:
+            #print("5.2  " + str(f['path']) + " " + str(manifestor_map['filter_expr']), file=sys.stderr)
             res += "\n\n"
-            res += "    * ***exclusion cause***:" 
+            f_action_s = FilterAction_to_string(manifestor_map['filter_action'])
+            f_type_s = FilterAttribute_to_string(manifestor_map['filter_type'])
             f_type = manifestor_map['filter_type']
             f_expr = "[" + manifestor_map['filter_expr'] + "](#" + manifestor_map['filter_expr'] + ")"
-            if f_type == FilterAttribute.PATH:
-                res += "file name matches \"" +  f_expr + "\""
-            elif f_type == FilterAttribute.LICENSE:
-                res += "license matches \"" +  f_expr + "\""
-            elif f_type == FilterAttribute.COPYRIGHT:
-                res += "copyright matches \"" +  f_expr + "\""
-            else:
-                res += " ERROR - unknown filter type " + str(f_type)
+
+            #res += "    * ***filter type***: " + str(manifestor_map['filter_type']) + "\n\n"
+            #res += "    * ***filter type***: " + f_type_s + "\n\n"
+            #res += "    * ***filter action***: " + f_action_s + "\n\n"
+            #res += "    * ***filter expr***: " + f_expr + "\n\n"
+
+            exclusion_string = " matches "
+            if f_action_s == "include":
+                exclusion_string = " does not match "
+            res += "    * ***filter information***: " + f_type_s + " excluded since it " + exclusion_string + f_expr
+            
         res += "\n\n"
         return res
     
@@ -88,7 +95,7 @@ class MarkdownFormatter:
         res += self._collapse_begin()        
         for re_list in report["meta"]["arguments"]["excluded_regexps"]:
             for re in re_list:
-                res += str(" * <a name=\"" + re + "\"></a>" + re + "\n\n" )
+                res += str(" * <a name=\"" + re + "\">" + re + "</a>\n\n" )
                 for f in files:
                     if f['type'] == "file":
                         #print("--------")
@@ -118,20 +125,43 @@ class MarkdownFormatter:
 
         return res
 
-    def _included_file(self, f):
-        res = " * " + self._file_url(f)
+    def _included_file(self, f, indent=""):
+        res = indent + " * " + self._file_url(f)
         res += "\n\n"
-        res += "    * ***file type***: " + str(f['file_type']).strip()
+        res += indent + "    * ***file type***: " + str(f['file_type']).strip()
         manifestor_map = f['scancode_manifestor']
         res += "\n\n"
-        res += "    * ***original license***: " + str(manifestor_map['license_key'])
+        res += indent + "    * ***original license***: " + str(manifestor_map['license_key'])
         res += "\n\n"
 
+        # filter information
+        if 'filter_type' in manifestor_map:
+            #print("6.2  " + str(f['path']) + " " + str(manifestor_map['filter_expr']), file=sys.stderr)
+            res += "\n\n"
+            f_action_s = FilterAction_to_string(manifestor_map['filter_action'])
+            f_type_s = FilterAttribute_to_string(manifestor_map['filter_type'])
+            f_type = manifestor_map['filter_type']
+            f_expr = "[" + manifestor_map['filter_expr'] + "](#" + manifestor_map['filter_expr'] + ")"
+
+            #res += "    * ***filter type***: " + str(manifestor_map['filter_type']) + "\n\n"
+            #res += "    * ***filter type***: " + f_type_s + "\n\n"
+            #res += "    * ***filter action***: " + f_action_s + "\n\n"
+            #res += "    * ***filter expr***: " + f_expr + "\n\n"
+
+            inclusion_string = " matches "
+            if f_action_s == "exclude":
+                inclusion_string = " does not match "
+            res += indent + "    * ***filter information***: " + f_type_s + " included since it " + inclusion_string + f_expr
+            res += "\n\n"
+        else:
+            res += indent + "    * ***filter information***: included by default\n\n"
+            
+        # curation information
         if 'curated_license' in manifestor_map:
             c_license = manifestor_map['curated_license']
-            res += "    * ***curated license***: " + c_license 
+            res += indent + "    * ***curated license***: " + c_license 
             res += "\n\n"
-            res += "    * ***curation reason***:" 
+            res += indent + "    * ***curation reason***:" 
             if 'curation_type' in manifestor_map:
                 #print(str(manifestor_map))
                 c_type = manifestor_map['curation_type']
@@ -163,9 +193,6 @@ class MarkdownFormatter:
         res += "<a name=\"" + scancode_manifestor.explanations.CURATED_FILES_FILE_HEADER + "\"></a>\n\n"
         res += "### 7.1 " + scancode_manifestor.explanations.CURATED_FILES_FILE_HEADER
         res += "\n\n"
-        if self.args['add_explanations']:
-            res += "*" + scancode_manifestor.explanations.CURATED_FILES_FILE_EXPLANATION + "*"
-            res += "\n\n"
         
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.CURATED_FILES_FILE_EXPLANATION + "*"
@@ -218,6 +245,7 @@ class MarkdownFormatter:
                         #print("   \"" + c_expr + "\"", file=sys.stderr)
                         if c_type == 'license' and c_expr == "[]":
                             res += " * " + self._file_name_url(f['path']) + "\n\n"
+                            res += "     * ***curated license:*** \"" +  curation_license + "\"\n\n" 
         res += self._collapse_end()        
 
         return res
@@ -232,9 +260,50 @@ class MarkdownFormatter:
         if self.args['add_explanations']:
             res += "*" + scancode_manifestor.explanations.INCLUDED_FILES_EXPLANATION + "*"
             res += "\n\n"
-        res += "<a name=\"" + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER + "\"></a>\n\n"
-        res += "### 6.1 " + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER
+            
+        res += "<a name=\"" + scancode_manifestor.explanations.INCLUDED_FILES_FILTERS_HEADER + "\"></a>\n\n"
+        res += "### 6.1 " + scancode_manifestor.explanations.INCLUDED_FILES_FILTERS_HEADER
         res += "\n\n"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.INCLUDED_FILES_FILTERS_EXPLANATION + "*"
+            res += "\n\n"
+        res += self._collapse_begin()
+
+        # Iterate through all included regexpes
+        for re_list in report["meta"]["arguments"]["included_regexps"]:
+            for re in re_list:
+                res += str(" * <a name=\"" + re + "\"></a>" + re + "\n\n" )
+                for f in files:
+                    if f['type'] == "file":
+                        #print("--------")
+                        manifestor_map = f['scancode_manifestor']
+                        if f['type'] == 'file':
+                            #res += " file"
+                            if 'filter_type' in manifestor_map and  manifestor_map['filter_type'] == FilterAttribute.PATH:
+                                #res+=" filter"
+                                if re == manifestor_map['filter_expr']:
+                                    res += "    * " + self._file_url(f) +  "\n\n"
+                res += "\n\n"
+        # Find all files neither included or excluded
+        res += str(" * Included by default (not excluded)\n\n" )
+        for f in files:
+            if f['type'] == "file":
+                #print("--------")
+                manifestor_map = f['scancode_manifestor']
+                if f['type'] == 'file':
+                    #res += " file"
+                    if 'filter_type' not in manifestor_map:
+                        #res += "    * " + self._file_url(f) +  "\n\n"
+                        res += self._included_file(f, "    ") +  "\n\n"
+        
+        res += self._collapse_end()        
+
+        res += "<a name=\"" + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER + "\"></a>\n\n"
+        res += "### 6.2 " + scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER
+        res += "\n\n"
+        if self.args['add_explanations']:
+            res += "*" + scancode_manifestor.explanations.INCLUDED_FILES_FILES_EXPLANATION + "*"
+            res += "\n\n"
         res += self._collapse_begin()        
         for f in files:
             if f['type'] == 'file':
@@ -428,7 +497,8 @@ class MarkdownFormatter:
         res += " 5.1 " +   self._header_link(scancode_manifestor.explanations.EXCLUDED_FILES_FILTERS_HEADER)
         res += " 5.2 " +   self._header_link(scancode_manifestor.explanations.EXCLUDED_FILES_FILES_HEADER)
         res += " 6 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_HEADER)
-        res += " 6.1 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER)
+        res += " 6.1 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_FILTERS_HEADER)
+        res += " 6.2 " +   self._header_link(scancode_manifestor.explanations.INCLUDED_FILES_FILES_HEADER)
         res += " 7 " +   self._header_link(scancode_manifestor.explanations.CURATED_FILES_HEADER)
         res += " 7.1 " +   self._header_link(scancode_manifestor.explanations.CURATED_FILES_FILE_HEADER)
         res += " 7.1 " +   self._header_link(scancode_manifestor.explanations.CURATED_FILES_MISSING_HEADER)
