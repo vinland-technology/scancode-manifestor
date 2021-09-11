@@ -82,8 +82,10 @@ MODE_VALIDATE    = "validate"
 MODE_CREATE      = "create"
 MODE_CONFIG      = "config"
 MODE_INTERACTIVE = "interactive"
+MODE_COPYRIGHT = "copyright"
+MODE_LICENSE = "license"
 
-ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_CREATE, MODE_CONFIG, MODE_INTERACTIVE ]
+ALL_MODES = [ MODE_FILTER, MODE_VALIDATE, MODE_CREATE, MODE_CONFIG, MODE_INTERACTIVE, MODE_COPYRIGHT , MODE_LICENSE]
 DEFAULT_MODE=MODE_FILTER
 
 OUTPUT_FORMAT_TEXT="text"
@@ -488,6 +490,64 @@ def main():
         utils._output_filtered(transformed, sys.stderr, hiders)
     #print(json.dumps((transformed)))
 
+
+    #
+    # Copyright output mode
+    #
+    if args['mode'] == MODE_COPYRIGHT:
+        copyrights = utils.copyrights(filtered)
+        print("---")
+        print("legal:")
+        print("    copyrights:")
+        prefix = "       "
+        max_line = 75
+        max_length = max_line - len(prefix)
+        for c_line in copyrights:
+            if (len(prefix) + len(c_line)) > max_line:
+                print(prefix + " - ", end="")
+                lines = [c_line[i:i+max_length] for i in range(0, len(c_line), max_length)]
+                first = True
+                for line in lines:
+                    if first:
+                        print(line)
+                        first = False
+                    else:
+                        print(prefix + "   " + line)
+                        
+            else:
+                    print(prefix + " - " + c_line)
+        exit(0)
+    
+    #
+    # License output mode
+    #
+    if args['mode'] == MODE_LICENSE:
+        licenses = utils.license_summary(filtered['included'])
+        uni_licenses = set()
+        for lic in licenses:
+            if lic is None:
+                pass
+            else:
+                for exp in lic.replace("(", " ").replace(")", " " ).split(" "):
+                    if exp.lower() == "and":
+                        pass
+                    elif exp.lower() == "or":
+                        pass
+                    elif exp.lower() == "(":
+                        pass
+                    elif exp.lower() == ")":
+                        pass
+                    else:
+                        #print(" " + str(exp))
+                        uni_licenses.add(exp)
+
+        uni_license_list = list(uni_licenses)
+        uni_license_list.sort()
+        for lic in uni_license_list:
+            print(" " + str(lic))
+            
+        exit(0)
+    
     #
     # add curations
     #
