@@ -267,10 +267,9 @@ class ManifestUtils:
                     self._add_scancode_manifestor_data(f, 'filter_action', include)
                     self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
                     excluded.append(f)
-
-                    #print("woops: " + str(f['name']))
-                    #print("woops: " + str(f['scancode_manifestor']))
                     files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
+                    #files['excluded'].append( files['included'].pop( files['included'].index( f ) ) )
+
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)))
 
                 else:
@@ -295,6 +294,7 @@ class ManifestUtils:
         licenses = set()
         for lic in f['license_expressions']:
             licenses.add(lic)
+            #print("adding ... " + lic)
             #licenses.add(lic['key'])
         return licenses
 
@@ -323,11 +323,13 @@ class ManifestUtils:
 
     def _filter(self, _files, included_regexps, excluded_regexps):
         files = _files
+        #print("files 1 #: " + str(len(_files['included'])))
         for regexp_list in included_regexps:
             self.logger.verbose("Include file:    " + str(regexp_list))
             for regexp in regexp_list:
                 self.logger.verbose(" * include file:    " + regexp)
                 self._filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.INCLUDE)
+        #print("files 2 #: " + str(len(_files['included'])))
 
         for regexp_list in excluded_regexps:
             self.logger.verbose("Exclude file:    " + str(regexp_list))
@@ -524,6 +526,22 @@ class ManifestUtils:
             cnt += 1
         return cnt
 
+    def copyrights(self, _files):
+        copyrights=set()
+        files = _files['included']
+        for f in files:
+            if self._isdir(f):
+                continue
+            manifest_map = f['scancode_manifestor']
+            for c in manifest_map['copyright']:
+                copyrights.add(c)
+        copyright_list = list(copyrights)
+        copyright_list.sort()
+        return copyright_list
+    
+    def license_summary(self, files):
+        return self._license_summary(files)
+    
     def _license_summary(self, files):
         licenses={}
         for f in files:
@@ -682,8 +700,6 @@ class ManifestUtils:
         json_compat_lic = str(parsed).replace("AND", " & ")
         #print("\nlicenses: " + str(parsed))
         #exit(0)
-
-
 
         report = {}
 
