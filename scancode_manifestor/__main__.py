@@ -274,6 +274,14 @@ def parse(commands):
                         help="exclude files and dirs matching the supplied patterns",
                         default=[])
 
+    parser.add_argument('-eff', '--exclude-file-file',
+                        dest='excluded_file_file',
+                        type=str,
+                        action='append',
+                        nargs="+",
+                        help="file with exclude file expressions to be read an used",
+                        default=[])
+
     parser.add_argument('-' + commands.COMMAND_SHORT_INCLUDE_FILE, '--' + commands.COMMAND_INCLUDE_FILE,
                         dest='included_regexps',
                         type=str,
@@ -385,6 +393,22 @@ class ScancodeManifestor:
                 keys.add(k)
         return keys
 
+    def _merge_exclude_files(self, args):
+        new_reg_exp = []
+        for file_name_list in args['excluded_file_file']:
+            for file_name in file_name_list:
+                #print(" * " + str(file_name))
+                f = open(file_name, 'r')
+                for line in f.readlines():
+                    stripped_line = line.strip()
+                    #print(" ==| " +  str(len(line)) + " |==" + str(line) , end="")
+                    if not line.startswith("#") and len(stripped_line) > 0:
+                        reg_exp = stripped_line + "$"
+                        #print("-----> " + reg_exp)
+                        new_reg_exp.append(reg_exp)
+        if not new_reg_exp is []:
+            args['excluded_regexps'].append(new_reg_exp)
+        
 
 def main():
 
@@ -449,6 +473,8 @@ def main():
     #
     # filter files
     #
+    #print("reading file file: " + str(args['excluded_file_file']))
+    manifestor._merge_exclude_files(args)
     utils._filter(files, args['included_regexps'], args['excluded_regexps'])
     filtered = files
         
@@ -593,9 +619,8 @@ def main():
             formatter = MarkdownFormatter(args, utils)
 
         format_report = formatter.format(report)
-            
+
         if args['output'] != None:
-            print("output: " + str(args['output']))
             with open(args['output'], "w") as manifest_file:
                 manifest_file.write(format_report) 
         else:
