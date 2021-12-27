@@ -34,6 +34,8 @@ from scancode_manifestor.format_markdown import MarkdownFormatter
 from scancode_manifestor.format_text import TextFormatter
 from scancode_manifestor.format_json import JSONFormatter
 
+from scancode_manifestor.scancode_manifestor_config import scancode_manifestor_version
+
 
 
 #
@@ -59,22 +61,12 @@ from scancode_manifestor.format_json import JSONFormatter
 PROGRAM_NAME = "scancode-analyser.py"
 PROGRAM_DESCRIPTION = "A tool to create package manifests from a Scancode report"
 PROGRAM_AUTHOR = "Henrik Sandklef"
-COMPLIANCE_UTILS_VERSION="__COMPLIANCE_UTILS_VERSION__"
 PROGRAM_URL="https://github.com/vinland-technology/scancode-manifestor"
 PROGRAM_COPYRIGHT="(c) 2021 Henrik Sandklef<hesa@sandklef.com>"
 PROGRAM_LICENSE="GPL-3.0-or-later"
 PROGRAM_SEE_ALSO=""
 
 UNKNOWN_LICENSE = "unknown"
-
-if COMPLIANCE_UTILS_VERSION == "__COMPLIANCE_UTILS_VERSION__":
-    GIT_DIR=os.path.dirname(os.path.realpath(__file__))
-    command = "cd " + GIT_DIR + " && git rev-parse --short HEAD"
-    try:
-        res = subprocess.check_output(command, shell=True)
-        COMPLIANCE_UTILS_VERSION=str(res.decode("utf-8"))
-    except Exception as e:
-        COMPLIANCE_UTILS_VERSION="unknown"
 
 
 MODE_FILTER      = "filter"
@@ -320,7 +312,7 @@ def parse(commands):
 
     parser.add_argument('-V', '--version',
                         action='version',
-                        version=COMPLIANCE_UTILS_VERSION,
+                        version=scancode_manifestor_version,
                         default=False)
 
     args = parser.parse_args()
