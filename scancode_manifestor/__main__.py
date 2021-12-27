@@ -274,6 +274,12 @@ def parse(commands):
                         help="file with exclude file expressions to be read an used",
                         default=[])
 
+    parser.add_argument('-ede', '--enable-default-excludes',
+                        dest='enable_default_excludes',
+                        action='store_true',
+                        help="use built-in files with exclude file expressions to be read an used",
+                        default=False)
+
     parser.add_argument('-' + commands.COMMAND_SHORT_INCLUDE_FILE, '--' + commands.COMMAND_INCLUDE_FILE,
                         dest='included_regexps',
                         type=str,
@@ -386,7 +392,22 @@ class ScancodeManifestor:
         return keys
 
     def _merge_exclude_files(self, args):
+        if args['enable_default_excludes']:
+            SCRIPT_DIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
+            VAR_DIR = os.path.join(SCRIPT_DIR, "var")
+            files = [ 'armijn_file_filter.txt' , 'default.txt']
+            file_names = []
+            for f in files:
+                file_name = os.path.join(VAR_DIR, f)
+                file_names.append(file_name)
+                #print("SCR: " + SCRIPT_DIR)
+                #print("VAR: " + VAR_DIR)
+                #print("ADD: " + file_name)
+                #print(" ---> " + str(file_names))
+            args['excluded_file_file'].append(file_names)
+                
         new_reg_exp = []
+        #print(" me " + str(args['excluded_file_file']))
         for file_name_list in args['excluded_file_file']:
             for file_name in file_name_list:
                 #print(" * " + str(file_name))
