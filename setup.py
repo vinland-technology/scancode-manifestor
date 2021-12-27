@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import setuptools
+from scancode_manifestor.scancode_manifestor_config import scancode_manifestor_version
 
 with open("README.md") as i:
     _long_description = i.read()
@@ -17,7 +18,7 @@ with open('requirements-dev.txt') as f:
 
 setuptools.setup(
     name="scancode-manifestor",
-    version="0.0.1",
+    version=scancode_manifestor_version,
     author="Henrik Sanklef",
     author_email="hesa@sandklef.com",
     description="Scancode Manifestor",
