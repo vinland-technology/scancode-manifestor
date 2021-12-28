@@ -403,7 +403,7 @@ class ScancodeManifestor:
                 #print("SCR: " + SCRIPT_DIR)
                 #print("VAR: " + VAR_DIR)
                 #print("ADD: " + file_name)
-                #print(" ---> " + str(file_names))
+                print(" ---> " + str(file_names))
             args['excluded_file_file'].append(file_names)
                 
         new_reg_exp = []
@@ -413,10 +413,12 @@ class ScancodeManifestor:
                 #print(" * " + str(file_name))
                 f = open(file_name, 'r')
                 for line in f.readlines():
-                    stripped_line = line.strip()
+                    stripped_line = line.strip().replace("\n","")
                     #print(" ==| " +  str(len(line)) + " |==" + str(line) , end="")
-                    if not line.startswith("#") and len(stripped_line) > 0:
-                        reg_exp = stripped_line + "$"
+                    if not stripped_line.startswith("#") and len(stripped_line) > 0:
+                        reg_exp = stripped_line
+                        if not stripped_line.endswith("/"):
+                            reg_exp = stripped_line + "$"
                         #print("-----> " + reg_exp)
                         new_reg_exp.append(reg_exp)
         if not new_reg_exp is []:
