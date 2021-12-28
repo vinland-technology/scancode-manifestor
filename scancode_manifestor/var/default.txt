@@ -1,3 +1,7 @@
+# With a trailing "/" it is assumed that it is a directory Otherwise a
+# file. Files get "$" (as in end of string) appended automatically, so
+# files here matches last part of a file
+
 BIBLIOGRAPHY
 BUGS
 autogen.sh
@@ -8,3 +12,13 @@ PORTING_GUIDE
 RELEASING
 CODING_STYLE
 config.status
+autom4te.cache/
+.timestamp
+~
+.deps/
+ChangeLog.*
+changelog.*
+ChangeLog*
+changelog*
+Makefile*
+Makefile.*
