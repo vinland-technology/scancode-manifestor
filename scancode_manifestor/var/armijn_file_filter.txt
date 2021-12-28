@@ -1,3 +1,14 @@
+#
+# This file is copied from
+#    https://github.com/armijnhemel/compliance-scripts/blob/master/copyright-statements/filters.txt
+#
+# Assumed to be:
+#
+# Copyright Armijn Hemel for Tjaldur Software Governance Solutions
+# SPDX-Identifier: GPL-3.0-only
+#
+#
+
 # autotools generated stuff and libtool files. There is often some GPL license statement in there.
 configure.ac
 config.guess
