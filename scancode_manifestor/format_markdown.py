@@ -216,7 +216,7 @@ class MarkdownFormatter:
                             c_expr = manifestor_map['curation_expr']
                             if c_type == 'file':
                                 res += "    * " + self._file_name_url(f['path']) + "\n\n"
-                                res += "        * ***original license:*** " + o_license + "\n\n" 
+                                res += "        * ***original license:*** " + str(o_license) + "\n\n" 
                                 res += "        * ***curated license:*** \"" +  curation_license + "\n\n" 
                     
         res += self._collapse_end()        
