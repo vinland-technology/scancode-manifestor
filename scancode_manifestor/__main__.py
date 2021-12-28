@@ -403,7 +403,7 @@ class ScancodeManifestor:
                 #print("SCR: " + SCRIPT_DIR)
                 #print("VAR: " + VAR_DIR)
                 #print("ADD: " + file_name)
-                print(" ---> " + str(file_names))
+                #print(" ---> " + str(file_names))
             args['excluded_file_file'].append(file_names)
                 
         new_reg_exp = []
