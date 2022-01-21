@@ -39,6 +39,7 @@ class FilterAttribute(Enum):
     LICENSE   = 2
     COPYRIGHT = 3
 
+
 class FilterAction(Enum):
     INCLUDE       = 1
     EXCLUDE       = 2
@@ -294,7 +295,6 @@ class ManifestUtils:
         licenses = set()
         for lic in f['license_expressions']:
             licenses.add(lic)
-            #print("adding ... " + lic)
             #licenses.add(lic['key'])
         return licenses
 
@@ -429,51 +429,59 @@ class ManifestUtils:
                 self.logger.verbose(f['name'] + " => " + lic)
                 self._add_scancode_manifestor_data(f, 'curation_type', 'file')
                 self._add_scancode_manifestor_data(f, 'curation_expr', regexpr)
-                self._add_scancode_manifestor_data(f, 'curated_license', lic)
+                self._add_scancode_manifestor_data(f, 'curated_license', "(" + lic + ")" )
 
-    def _do_curate_license(self, f, lic):
-        if ('scancode_manifestor' not in f) or (f['scancode_manifestor']['license_key']==None):
-            #print(" * " + str(f['name']))
+    def _do_curate_license(self, f, lic, reg_expr=None):
+        if reg_expr is None:
+            # Just change it
             self.logger.verbose(f['name'] + " missing license_key => " + lic)
-            #if "dumps" in f['path']:
-                #print(" *** FILE: " + str(f['path']))
-                #print(" *** FILE: " + str(json.dumps(f, indent=4)))
-                #print(" *** FILE: " + str(f))
-                #print(" *** FILE: " + str(f['license_key']))
             self._add_scancode_manifestor_data(f, 'curation_type', 'license')
-            self._add_scancode_manifestor_data(f, 'curated_license', lic)
+            self._add_scancode_manifestor_data(f, 'curated_license', "(" + lic + ")")
             self._add_scancode_manifestor_data(f, 'curation_expr', "[]")
-            #                    f['license_key'] = lic
             return 1
-                    
         else:
-            self.logger.warn("File " + str(f['path']))
-            self.logger.warn(" - previously curated to: " + f['scancode_manifestor']['curated_license'])
-            self.logger.warn(" - ignoring curation to:  " + lic)
-            self.logger.warn(" - scancode_manifestor:   " + str(json.dumps(f['scancode_manifestor'], indent=4)))
+            # Check if license (in file) matches reg_expr
+            curations = 0 
+            curated_license = ""
+            for le in f['license_expressions']:
+                if curated_license != "":
+                    curated_license += " AND "
+                if le == reg_expr:
+                    # found license to replace
+                    curated_license += lic
+                    curations += 1
+                else:
+                    curated_license += le
+
+            if curations > 0:
+                self.logger.verbose(f['name'] + " license curation => " + lic)
+                self._add_scancode_manifestor_data(f, 'curation_type', 'license')
+                self._add_scancode_manifestor_data(f, 'curated_license', "(" + curated_license + ")")
+                self._add_scancode_manifestor_data(f, 'curation_expr', reg_expr)
+            return curations
+
         return 0
                 
     def _curate_license(self, files, regexpr, lic):
         curations = 0 
         new_list = []
-        #print("files: " + str(files))
         included_files = files['included']
+        #print("files: " + str(len(files['included'])))
         for f in included_files:
-
+            #print("file: " + str(f['path']))
             # Passing "[]" as regexp should be interpreted as
             # matches license=[]
             if regexpr == "[]":
                 #if "dumps" in f['path']:
                     #print("----HERE I AM " + str(f['path'] + " " + str(f)))
-
-                if f['licenses'] == []:
+                if f['license_expressions'] == []:
                     curation_cnt = self._do_curate_license(f, lic)
                     curations += curation_cnt
+                            
             else:
-                if len(f['license_expressions']) == 1:
-                    if f['license_expressions'][0] == regexpr:
-                        curation_cnt = self._do_curate_license(f, lic)
-                        curations += curation_cnt
+                curation_cnt = self._do_curate_license(f, lic, regexpr)
+                curations += curation_cnt
+                    
         return curations
 
     def _curate(self, files, file_curations, license_curations, missing_license_curation):
@@ -539,13 +547,38 @@ class ManifestUtils:
         copyright_list.sort()
         return copyright_list
     
+    def licenses(self, files):
+        license_set = set()
+        
+        for f in files:
+            if 'scancode_manifestor' in f:
+                if 'curated_license' in f['scancode_manifestor']:
+                    license_set.add(f['scancode_manifestor']['curated_license'])
+                else:
+                    license_set.add(f['scancode_manifestor']['license_key'])
+        else:
+            #print(f['path'] + " NO CURATIONS ")
+            for l in f['license_expressions']:
+                #print(" ADD " + l)
+                license_set.add(l)
+
+        license_string = ""
+        for l in license_set:
+            #print ("l:  " + str(l))
+            if license_string != "":
+                license_string += " AND "
+            license_string += " ( " + l + " ) "
+        licensing = Licensing()
+        parsed = licensing._parse_and_simplify(license_string)
+        return parsed
+    
     def license_summary(self, files):
         return self._license_summary(files)
     
     def _license_summary(self, files):
         licenses={}
         for f in files:
-            #print(" path " + str(f['path']))
+            print(" path " + str(f['path']))
             self.logger.verbose(" lice " + str(f['license_expressions']))
             if self._isfile(f):
                 lic = None
@@ -778,14 +811,14 @@ class ManifestUtils:
                 lk = " none "
             license_info = "[ " + lk + " : " + self._curated_license(f)  + " : " + self._curation_type(f) + " ]"
             if with_copyright:
-                print(str(f['name']) + " [" + license_info + "] [", end="" )
+                print(str(f['path']) + " [" + license_info + "] [", end="" )
                 for c in f['copyright']:
                     print(str(c), end="" )
                 print("]")
             else:
                 #print("f: " + str(f['name']))
                 #print("f: " + str(f['type']))
-                print("  " + str(f['name']) + " " + license_info)
+                print("  " + str(f['path']) + " " + license_info)
 
 
     def _output_verbose_file(self, files, verbose_file):
