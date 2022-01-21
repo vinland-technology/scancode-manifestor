@@ -4,21 +4,103 @@
 
 BIBLIOGRAPHY
 BUGS
-autogen.sh
+autogen\.sh
 HACKING
 KNOWN_ISSUES
-Makefile.am
-PORTING_GUIDE
+Makefile\.am
+Makefile\.in
 RELEASING
 CODING_STYLE
-config.status
-autom4te.cache/
-.timestamp
+config\.status
+autom4te\.cache/
+\.timestamp
 ~
-.deps/
-ChangeLog.*
-changelog.*
-ChangeLog*
-changelog*
-Makefile*
-Makefile.*
+\.deps/
+ChangeLog[\.\-\w]*
+Changelog[\.\-\w]*
+README[\.\-\w]*
+ABOUT[\.\-\w]*
+FAQ[\.\-\w]*
+TODO[\.\-\w]*
+MANIFEST
+BUILD[\.\-\w]*
+USAGE[\.\-\w]*
+OWNERS[\.\-\w]*
+BUILD[\.\-\w]*
+WORKSPACE[\.\-\w]*
+
+# misc projects
+Makevars
+PORTING_GUIDE
+POTFILES[\.\-\w]*
+LINGUAS
+CHANGES\.md
+
+# make, cmake
+CMakeLists\.txt
+[mM]akefile[\.\-\w]*
+
+# meson
+meson\.build[\.\-\w]*
+
+# man pages (additional, to armijn's)
+\.0$
+
+# bazel
+\.bazelignore
+\.bazelrc
+BUILD\.bazel
+
+# python
+\.pylintrc
+\.pylintrc-examples
+\.pylintrc-tests
+
+# gradle
+build\.gradle
+gradle\.properties
+gradlew
+gradlew\.bat
+settings\.gradle
+
+
+# ruby
+Gemfile
+\.rubocop\.yml
+\.rubocop_todo\.yml
+
+
+# git
+\.gitmodules
+\.github/
+\.gitbugtraq
+\.gitignore
+\.gitallowed
+\._.gitignore
+
+# clang
+\.clang-format
+\.clang-tidy
+
+# Doxygen
+Doxyfile
+doxy\.cfg
+
+# zlib
+\.mak$
+INDEX[\.\-\w]*
+
+# CI
+\.travis\.y[a]*ml
+
+# IDE
+\.project
+\.cproject
+\.editorconfig
+appveyor\.yml
+
+# xcode
+Podfile
+[iI]nfo\.plist
+project\.pbxproj
+
