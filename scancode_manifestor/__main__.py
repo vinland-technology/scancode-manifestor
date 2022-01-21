@@ -33,6 +33,7 @@ from scancode_manifestor.manifestor_utils import FilterModifier
 from scancode_manifestor.format_markdown import MarkdownFormatter
 from scancode_manifestor.format_text import TextFormatter
 from scancode_manifestor.format_json import JSONFormatter
+from scancode_manifestor.format_yaml import YamlFormatter
 
 from scancode_manifestor.scancode_manifestor_config import scancode_manifestor_version
 
@@ -83,6 +84,7 @@ DEFAULT_MODE=MODE_FILTER
 OUTPUT_FORMAT_TEXT="text"
 OUTPUT_FORMAT_JSON="json"
 OUTPUT_FORMAT_MARKDOWN="markdown"
+OUTPUT_FORMAT_YAML="yaml"
 DEFAULT_OUTPUT_FORMAT=OUTPUT_FORMAT_TEXT
 
 def parse(commands):
@@ -106,8 +108,8 @@ def parse(commands):
 
     parser.add_argument('mode',
                         help='Specify execution mode (' + str(ALL_MODES) + '). Default mode: ' + DEFAULT_MODE ,
-                        nargs='?',
-                        default=DEFAULT_MODE)
+                        type=str,
+                        default=MODE_FILTER)
 
     parser.add_argument('-v', '--verbose',
                         action='store_true',
@@ -331,7 +333,7 @@ class ScancodeManifestor:
         self.commands = commands
         self.logger = logger
         self.utils = utils
-        
+
     def _setup_files(self, files):
         return self.utils._files_map(files, [])
 
@@ -371,7 +373,11 @@ class ScancodeManifestor:
                     self.logger.verbose("       merge ")
                     new_args[k] = config_args[k] + args[k] 
                 else:
-                    new_args[k] = args[k] 
+                    reuse_options = [ 'enable_default_excludes', 'include_copyrights']
+                    if k in reuse_options:
+                        new_args[k] = v
+                    else:
+                        new_args[k] = args[k] 
                     self.logger.verbose("       replace")
 
         self.logger.verbose(" -- merged arguments ---")
@@ -423,7 +429,20 @@ class ScancodeManifestor:
                         new_reg_exp.append(reg_exp)
         if not new_reg_exp is []:
             args['excluded_regexps'].append(new_reg_exp)
-        
+
+
+
+            
+def get_formatter(args, utils):
+    if args['format'].lower() == OUTPUT_FORMAT_TEXT:
+        return TextFormatter(args, utils)
+    elif args['format'].lower() == OUTPUT_FORMAT_JSON:
+        return JSONFormatter(args, utils)
+    elif args['format'].lower() == OUTPUT_FORMAT_MARKDOWN:
+        return MarkdownFormatter(args, utils)
+    elif args['format'].lower() == OUTPUT_FORMAT_YAML:
+        return YamlFormatter(args, utils)
+    return None
 
 def main():
 
@@ -439,6 +458,8 @@ def main():
     logger = ManifestLogger(args['verbose'])
     utils = ManifestUtils(logger)
     manifestor = ScancodeManifestor(commands, logger, utils)
+    formatter = get_formatter(args, utils)
+    manifestor._merge_exclude_files(args)
     
     #
     # if config file supplied - read up args and merge with those
@@ -446,7 +467,7 @@ def main():
     #
     if args['config'] != None:
         args = manifestor._read_merge_args(args)
-    
+
     #
     # if config mode - dump args and leave
     #
@@ -489,7 +510,6 @@ def main():
     # filter files
     #
     #print("reading file file: " + str(args['excluded_file_file']))
-    manifestor._merge_exclude_files(args)
     utils._filter(files, args['included_regexps'], args['excluded_regexps'])
     filtered = files
         
@@ -533,67 +553,27 @@ def main():
 
 
     #
+    # add curations
+    #
+    curations = utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
+    curated = transformed
+    
+    #
     # Copyright output mode
     #
     if args['mode'] == MODE_COPYRIGHT:
-        copyrights = utils.copyrights(filtered)
-        print("---")
-        print("legal:")
-        print("    copyrights:")
-        prefix = "       "
-        max_line = 75
-        max_length = max_line - len(prefix)
-        for c_line in copyrights:
-            if (len(prefix) + len(c_line)) > max_line:
-                print(prefix + " - ", end="")
-                lines = [c_line[i:i+max_length] for i in range(0, len(c_line), max_length)]
-                first = True
-                for line in lines:
-                    if first:
-                        print(line)
-                        first = False
-                    else:
-                        print(prefix + "   " + line)
-                        
-            else:
-                    print(prefix + " - " + c_line)
+        copyrights = utils.copyrights(curated)
+        copyrights_formatted = formatter.format_copyrights(copyrights)
+        print(copyrights_formatted)
         exit(0)
     
     #
     # License output mode
     #
     if args['mode'] == MODE_LICENSE:
-        licenses = utils.license_summary(filtered['included'])
-        uni_licenses = set()
-        for lic in licenses:
-            if lic is None:
-                pass
-            else:
-                for exp in lic.replace("(", " ").replace(")", " " ).split(" "):
-                    if exp.lower() == "and":
-                        pass
-                    elif exp.lower() == "or":
-                        pass
-                    elif exp.lower() == "(":
-                        pass
-                    elif exp.lower() == ")":
-                        pass
-                    else:
-                        #print(" " + str(exp))
-                        uni_licenses.add(exp)
-
-        uni_license_list = list(uni_licenses)
-        uni_license_list.sort()
-        for lic in uni_license_list:
-            print(" " + str(lic))
-            
+        licenses = utils.licenses(curated['included'])
+        print(licenses)
         exit(0)
-    
-    #
-    # add curations
-    #
-    curations = utils._curate(transformed, args['file_curations'], args['license_curations'], args['missing_license_curation'])
-    curated = transformed
     
     #
     # validate
@@ -625,14 +605,6 @@ def main():
         exit(0)
 
     if args['mode'] == MODE_CREATE:
-        formatter = None
-        if args['format'].lower() == OUTPUT_FORMAT_TEXT:
-            formatter = TextFormatter(args, utils)
-        elif args['format'].lower() == OUTPUT_FORMAT_JSON:
-            formatter = JSONFormatter(args, utils)
-        elif args['format'].lower() == OUTPUT_FORMAT_MARKDOWN:
-            formatter = MarkdownFormatter(args, utils)
-
         format_report = formatter.format(report)
 
         if args['output'] != None:
