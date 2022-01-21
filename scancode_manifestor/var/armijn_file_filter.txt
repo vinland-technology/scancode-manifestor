@@ -2,6 +2,8 @@
 # This file is copied from
 #    https://github.com/armijnhemel/compliance-scripts/blob/master/copyright-statements/filters.txt
 #
+#    and slightly modified
+#
 # Assumed to be:
 #
 # Copyright Armijn Hemel for Tjaldur Software Governance Solutions
@@ -10,22 +12,22 @@
 #
 
 # autotools generated stuff and libtool files. There is often some GPL license statement in there.
-configure.ac
-config.guess
-config.sub
-config.log
+configure\.ac
+config\.guess
+config\.sub
+config\.log
 compile
 configure
 depcomp
-ltmain.sh
+ltmain\.sh
 missing
 test-driver
-libtool.m4
-Makefile.in
-aclocal.m4
+libtool\.m4
+Makefile\.in
+aclocal\.m4
 shtool
 ylwrap
-.m4
+\.m4
 
 # generic make file stuff
 Makefile
@@ -36,63 +38,63 @@ Kbuild
 
 # Other Linux kernel files
 CREDITS
-Module.symvers
-.txt
+Module\.symvers
+\.txt
 
 # RPM stuff
-.spec
-.spec.in
+\.spec
+\.spec\.in
 
 # generated files
-.gmo
+\.gmo
 
 # translations
-.po
+\.po
 
 # Postscript and PDF
-.ps
-.pdf
+\.ps
+\.pdf
 
 # license files
 COPYING
 COPYING3
-COPYING3.LIB
+COPYING3\.LIB
 LICENSE
 AUTHORS
 
 # LaTeX, info and texinfo
-.info
-.tex
-.texi
-.texinfo
-.dvi
+\.info
+\.tex
+\.texi
+\.texinfo
+\.dvi
 
 # XML files
-.xml
-.sax
-.sax2
-.svg
+\.xml
+\.sax
+\.sax2
+\.svg
 
 # libxml2 and libxslt specific
-.rde
-.rdr
-.html
+\.rde
+\.rdr
+\.html
 rdf1
 rdf2
-.fo
-.xhtml
-.orig
-.out
+\.fo
+\.xhtml
+\.orig
+\.out
 
 # man pages
-.1
-.2
-.3
-.4
-.5
-.6
-.7
-.8
+\.1
+\.2
+\.3
+\.4
+\.5
+\.6
+\.7
+\.8
 
 # random files
 RELEASE-NOTES
@@ -103,15 +105,15 @@ ChangeLog-2009
 CONTRIBUTING
 README
 CommitLog
-CommitLog-4.1.0
+CommitLog-4\.1\.0
 COPYRIGHT
 CHANGES
-COPYRIGHT.GPL
+COPYRIGHT\.GPL
 INSTALL
-CONTRIBUTING.md
-README.sol2
+CONTRIBUTING\.md
+README\.sol2
 CHANGELOG
-README.LZO
+README\.LZO
 EXAMPLES
 CONTRIBUTIONS
-.md
+\.md
