@@ -23,4 +23,9 @@ class JSONFormatter:
     def format(self, report):
         return str(json.dumps(report))
 
-    
+    def format_copyrights(self, copyrights):
+        value = []
+        key = "copyrightText"
+        for c_line in copyrights:
+            value.append(c_line + "\n")
+        return json.dumps({ key:"".join(value) })
