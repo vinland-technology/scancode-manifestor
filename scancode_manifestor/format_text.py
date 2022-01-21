@@ -21,9 +21,7 @@ class TextFormatter:
         self.args = args
 
     def format(self, report):
-        res = "text report"
-
-
+        res = "text report not implemented yet, use markdown instead and use pandoc to create text"
 
         return res
 
