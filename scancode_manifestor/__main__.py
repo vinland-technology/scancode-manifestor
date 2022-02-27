@@ -275,6 +275,14 @@ def parse(commands):
                         nargs="+",
                         help="file with exclude file expressions to be read an used",
                         default=[])
+    
+    parser.add_argument('-iff', '--include-file-file',
+                        dest='included_file_file',
+                        type=str,
+                        action='append',
+                        nargs="+",
+                        help="file with include file expressions to be read an used",
+                        default=[])
 
     parser.add_argument('-ede', '--enable-default-excludes',
                         dest='enable_default_excludes',
