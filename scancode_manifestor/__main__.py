@@ -487,6 +487,7 @@ def main():
     manifestor = ScancodeManifestor(commands, logger, utils)
     formatter = get_formatter(args, utils)
     manifestor._merge_exclude_files(args)
+    manifestor._merge_include_files(args)
     
     #
     # if config file supplied - read up args and merge with those
