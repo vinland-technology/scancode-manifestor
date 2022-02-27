@@ -28,6 +28,11 @@ USAGE[\.\-\w]*
 OWNERS[\.\-\w]*
 BUILD[\.\-\w]*
 WORKSPACE[\.\-\w]*
+COPYING.[\.\-\w]*
+INSTALL
+INSTALL\.generic
+PACKAGERS
+CODEOWNER.[\.\-\w]*
 
 # misc projects
 Makevars
@@ -35,6 +40,9 @@ PORTING_GUIDE
 POTFILES[\.\-\w]*
 LINGUAS
 CHANGES\.md
+
+# autotools
+/build-aux/
 
 # make, cmake
 CMakeLists\.txt
@@ -85,6 +93,7 @@ Gemfile
 # Doxygen
 Doxyfile
 doxy\.cfg
+Doxyfile\.in
 
 # zlib
 \.mak$
