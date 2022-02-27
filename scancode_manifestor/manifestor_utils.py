@@ -323,19 +323,36 @@ class ManifestUtils:
 
     def _filter(self, _files, included_regexps, excluded_regexps):
         files = _files
-        #print("files 1 #: " + str(len(_files['included'])))
-        for regexp_list in included_regexps:
-            self.logger.verbose("Include file:    " + str(regexp_list))
-            for regexp in regexp_list:
-                self.logger.verbose(" * include file:    " + regexp)
-                self._filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.INCLUDE)
-        #print("files 2 #: " + str(len(_files['included'])))
 
+        exc = _files['excluded']
+        inc = _files['included']
+
+        if not (len(included_regexps) == 1 and included_regexps[0] == []):
+            #print("SWAPPIE: " + str(len(included_regexps)))
+            files['excluded'] = inc
+            files['included'] = exc
+                
+         #print("files 1 #: " + str(len(_files['included'])))
+         for regexp_list in included_regexps:
+             self.logger.verbose("Include file:    " + str(regexp_list))
+             for regexp in regexp_list:
+                #print("Include file:    " + str(regexp))
+                 self.logger.verbose(" * include file:    " + regexp)
+                for f in files['excluded']:
+                     #print("compare: " + str(f['path']) + " == " + regexp)
+                    if self._match_file(f, FilterAttribute.PATH, regexp):
+                        self._add_scancode_manifestor_data(f, 'filter_type', FilterAttribute.PATH)
+                        self._add_scancode_manifestor_data(f, 'filter_action', True)
+                        self._add_scancode_manifestor_data(f, 'filter_expr', str(regexp))
+                        file_path = f['path']
+                        files['included'].append(f)
+                        files['excluded'] = [x for x in files['excluded'].copy() if x['path'] != file_path ]
+        
         for regexp_list in excluded_regexps:
             self.logger.verbose("Exclude file:    " + str(regexp_list))
             for regexp in regexp_list:
                 self.logger.verbose(" * exclude file:    " + regexp)
-                self._filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
+                files = self._filter_generic(files, FilterAttribute.PATH, regexp, FilterAction.EXCLUDE)
 
         if OBSOLETE == False:
             for regexp_list in show_licenses:
