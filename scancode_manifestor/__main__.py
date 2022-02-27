@@ -538,7 +538,7 @@ def main():
     # filter files
     #
     #print("reading file file: " + str(args['excluded_file_file']))
-    utils._filter(files, args['included_regexps'], args['excluded_regexps'])
+    files = utils._filter(files, args['included_regexps'], args['excluded_regexps'])
     filtered = files
         
     if args['mode'] == MODE_INTERACTIVE:
