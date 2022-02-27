@@ -404,7 +404,26 @@ class ScancodeManifestor:
                 print("key: " + str(k) + " value: " + str(v))
                 keys.add(k)
         return keys
+    
+    def _merge_include_files(self, args):
+        new_reg_exp = []
+        for file_name_list in args['included_file_file']:
+            for file_name in file_name_list:
+                #print("INCLUDE FILE: " + str(file_name))
+                f = open(file_name, 'r')
+                for line in f.readlines():
+                    stripped_line = line.strip().replace("\n","")
+                    if not stripped_line.startswith("#") and len(stripped_line) > 0:
+                        reg_exp = stripped_line
+                        if not stripped_line.endswith("/"):
+                            reg_exp = stripped_line + "$"
+                        new_reg_exp.append(reg_exp)
+                        #print("    expr: " + str(reg_exp))
+ 
+        if not new_reg_exp is []:
+            args['included_regexps'].append(new_reg_exp)
 
+    
     def _merge_exclude_files(self, args):
         if args['enable_default_excludes']:
             SCRIPT_DIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
