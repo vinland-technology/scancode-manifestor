@@ -248,8 +248,10 @@ class ManifestUtils:
         except:
             raise ValueError("Incorrect list of files")
             
+        from_list = included
+        to_list = excluded
 
-        for f in files['included']:
+        for f in from_list:
             file_path = f['path']
             match = self._match_file(f, filter, regexpr, include, only)
             #print("-- match file: " + str(f['path'] + "  match: \"" + str(regexpr) + "\" ===> " + str(match)), file=sys.stderr)
@@ -267,11 +269,14 @@ class ManifestUtils:
                     self._add_scancode_manifestor_data(f, 'filter_type', filter)
                     self._add_scancode_manifestor_data(f, 'filter_action', include)
                     self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
-                    excluded.append(f)
-                    files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
+#                    excluded.append(f)
+
+#                    files['included'] = [x for x in files['included'].copy() if x['path'] != file_path ]
                     #files['excluded'].append( files['included'].pop( files['included'].index( f ) ) )
 
                     #print("remove   i:" + str(len(files['included'])) + "   e:" + str(len(excluded)))
+                    to_list.append(f)
+                    from_list = [x for x in from_list.copy() if x['path'] != file_path ]
 
                 else:
                     # OK, we should keep it
@@ -283,7 +288,8 @@ class ManifestUtils:
                         self._add_scancode_manifestor_data(f, 'filter_expr', str(regexpr))
 
 
-        return self._files_map(included, excluded)
+        files = self._files_map(from_list, to_list)
+        return files
 
     def _isfile(self, f):
         return f['type'] == "file"
@@ -332,21 +338,21 @@ class ManifestUtils:
             files['excluded'] = inc
             files['included'] = exc
                 
-         #print("files 1 #: " + str(len(_files['included'])))
-         for regexp_list in included_regexps:
-             self.logger.verbose("Include file:    " + str(regexp_list))
-             for regexp in regexp_list:
-                #print("Include file:    " + str(regexp))
-                 self.logger.verbose(" * include file:    " + regexp)
-                for f in files['excluded']:
-                     #print("compare: " + str(f['path']) + " == " + regexp)
-                    if self._match_file(f, FilterAttribute.PATH, regexp):
-                        self._add_scancode_manifestor_data(f, 'filter_type', FilterAttribute.PATH)
-                        self._add_scancode_manifestor_data(f, 'filter_action', True)
-                        self._add_scancode_manifestor_data(f, 'filter_expr', str(regexp))
-                        file_path = f['path']
-                        files['included'].append(f)
-                        files['excluded'] = [x for x in files['excluded'].copy() if x['path'] != file_path ]
+            #print("files 1 #: " + str(len(_files['included'])))
+            for regexp_list in included_regexps:
+                self.logger.verbose("Include file:    " + str(regexp_list))
+                for regexp in regexp_list:
+                    #print("Include file:    " + str(regexp))
+                    self.logger.verbose(" * include file:    " + regexp)
+                    for f in files['excluded']:
+                        #print("compare: " + str(f['path']) + " == " + regexp)
+                        if self._match_file(f, FilterAttribute.PATH, regexp):
+                            self._add_scancode_manifestor_data(f, 'filter_type', FilterAttribute.PATH)
+                            self._add_scancode_manifestor_data(f, 'filter_action', True)
+                            self._add_scancode_manifestor_data(f, 'filter_expr', str(regexp))
+                            file_path = f['path']
+                            files['included'].append(f)
+                            files['excluded'] = [x for x in files['excluded'].copy() if x['path'] != file_path ]
         
         for regexp_list in excluded_regexps:
             self.logger.verbose("Exclude file:    " + str(regexp_list))
