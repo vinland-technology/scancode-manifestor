@@ -442,13 +442,10 @@ class ScancodeManifestor:
         new_reg_exp = []
         #print(" me " + str(args['excluded_file_file']))
         for file_name_list in args['excluded_file_file']:
-            print("1")
             for file_name in file_name_list:
-                print("2")
                 #print(" * " + str(file_name))
                 f = open(file_name, 'r')
                 for line in f.readlines():
-                    print("3")
                     stripped_line = line.strip().replace("\n","")
                     #print(" ==| " +  str(len(line)) + " |==" + str(line) , end="")
                     if not stripped_line.startswith("#") and len(stripped_line) > 0:
