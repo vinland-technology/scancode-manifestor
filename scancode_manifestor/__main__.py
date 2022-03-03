@@ -442,21 +442,28 @@ class ScancodeManifestor:
         new_reg_exp = []
         #print(" me " + str(args['excluded_file_file']))
         for file_name_list in args['excluded_file_file']:
+            print("1")
             for file_name in file_name_list:
+                print("2")
                 #print(" * " + str(file_name))
                 f = open(file_name, 'r')
                 for line in f.readlines():
+                    print("3")
                     stripped_line = line.strip().replace("\n","")
                     #print(" ==| " +  str(len(line)) + " |==" + str(line) , end="")
                     if not stripped_line.startswith("#") and len(stripped_line) > 0:
                         reg_exp = stripped_line
                         if not stripped_line.endswith("/"):
                             reg_exp = stripped_line + "$"
+
+                        # escape regexp
+                        reg_exp = reg_exp.replace("+", "\+")
+                        
                         #print("-----> " + reg_exp)
                         new_reg_exp.append(reg_exp)
         if not new_reg_exp is []:
             args['excluded_regexps'].append(new_reg_exp)
-
+        #print("args['excluded_regexps']: " + json.dumps(args['excluded_regexps'], indent=4))
 
 
             
@@ -554,7 +561,8 @@ def main():
         if args['verbose_file']:
             utils._output_verbose_file(files, args['verbose_file'])
         else:
-            utils._output_filtered(filtered, args['hide_files']==False, args['show_directories'], sys.stdout, args['show_excluded_files'], hiders)
+            #utils._output_filtered(filtered, args['hide_files']==False, args['show_directories'], sys.stdout, args['show_excluded_files'], hiders)
+            utils._output_filtered(filtered, args['hide_files']==False, show_dirs=args['show_directories'], stream=sys.stdout, hiders=hiders)
         exit(0)
 
     keys = manifestor._using_hide_args(args)
