@@ -417,6 +417,10 @@ class ScancodeManifestor:
                         reg_exp = stripped_line
                         if not stripped_line.endswith("/"):
                             reg_exp = stripped_line + "$"
+
+                        # escape regexp
+                        reg_exp = reg_exp.replace("+", "\+")
+
                         new_reg_exp.append(reg_exp)
                         #print("    expr: " + str(reg_exp))
  
